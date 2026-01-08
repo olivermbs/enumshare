@@ -1,15 +1,14 @@
 {
-    "name": "olivermbs/laravel-enumshare",
-    "description": "Export PHP Enums to TypeScript/Inertia with labels, metadata, and type-safe frontend access",
+    "name": "olivermbs/enumshare",
+    "description": "Export PHP Enums to TypeScript with labels, metadata, and type-safe frontend access",
     "keywords": [
-        "laravel",
         "enum",
         "typescript",
+        "laravel",
         "inertia",
-        "frontend",
-        "serialization"
+        "frontend"
     ],
-    "homepage": "https://github.com/olivermbs/laravel-enumshare",
+    "homepage": "https://github.com/olivermbs/enumshare",
     "license": "MIT",
     "authors": [
         {
@@ -20,15 +19,15 @@
     ],
     "require": {
         "php": "^8.3",
-        "illuminate/contracts": "^10.0||^11.0||^12.0",
-        "illuminate/console": "^10.0||^11.0||^12.0",
+        "illuminate/contracts": "^11.0||^12.0",
+        "illuminate/console": "^11.0||^12.0",
         "symfony/finder": "^6.0||^7.0"
     },
     "require-dev": {
         "laravel/pint": "^1.14",
         "nunomaduro/collision": "^8.1.1||^7.10.0",
         "larastan/larastan": "^2.9||^3.0",
-        "orchestra/testbench": "^10.0.0||^9.0.0||^8.22.0",
+        "orchestra/testbench": "^10.0.0||^9.5.0||^8.22.0",
         "pestphp/pest": "^2.0||^3.0",
         "pestphp/pest-plugin-arch": "^2.5||^3.0",
         "pestphp/pest-plugin-laravel": "^2.0||^3.0",
@@ -38,12 +37,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Olivermbs\\LaravelEnumshare\\": "src/"
+            "Olivermbs\\Enumshare\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Olivermbs\\LaravelEnumshare\\Tests\\": "tests/",
+            "Olivermbs\\Enumshare\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/"
         }
     },
@@ -65,11 +64,8 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Olivermbs\\LaravelEnumshare\\LaravelEnumshareServiceProvider"
-            ],
-            "aliases": {
-                "LaravelEnumshare": "Olivermbs\\LaravelEnumshare\\Facades\\LaravelEnumshare"
-            }
+                "Olivermbs\\Enumshare\\EnumshareServiceProvider"
+            ]
         }
     },
     "minimum-stability": "dev",

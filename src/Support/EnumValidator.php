@@ -1,9 +1,9 @@
 <?php
 
-namespace Olivermbs\LaravelEnumshare\Support;
+namespace Olivermbs\Enumshare\Support;
 
-use Olivermbs\LaravelEnumshare\Concerns\SharesWithFrontend;
-use Olivermbs\LaravelEnumshare\Exceptions\InvalidEnumException;
+use Olivermbs\Enumshare\Concerns\SharesWithFrontend;
+use Olivermbs\Enumshare\Exceptions\InvalidEnumException;
 use ReflectionClass;
 use ReflectionException;
 

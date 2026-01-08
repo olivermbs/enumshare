@@ -1,6 +1,6 @@
 <?php
 
-namespace Olivermbs\LaravelEnumshare\Exceptions;
+namespace Olivermbs\Enumshare\Exceptions;
 
 use Exception;
 

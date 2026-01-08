@@ -13,7 +13,7 @@ parameters:
 			path: src/Commands/EnumsWatchCommand.php
 
 		-
-			message: '#^Trait Olivermbs\\LaravelEnumshare\\Concerns\\SharesWithFrontend is used zero times and is not analysed\.$#'
+			message: '#^Trait Olivermbs\\Enumshare\\Concerns\\SharesWithFrontend is used zero times and is not analysed\.$#'
 			identifier: trait.unused
 			count: 1
 			path: src/Concerns/SharesWithFrontend.php

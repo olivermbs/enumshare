@@ -1,10 +1,10 @@
 <?php
 
-namespace Olivermbs\LaravelEnumshare\Commands;
+namespace Olivermbs\Enumshare\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-use Olivermbs\LaravelEnumshare\Support\EnumRegistry;
+use Olivermbs\Enumshare\Support\EnumRegistry;
 
 class EnumsWatchCommand extends Command
 {

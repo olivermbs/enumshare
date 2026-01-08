@@ -2,10 +2,10 @@
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
-use Olivermbs\LaravelEnumshare\Concerns\SharesWithFrontend;
-use Olivermbs\LaravelEnumshare\Support\EnumAutoDiscovery;
-use Olivermbs\LaravelEnumshare\Support\EnumRegistry;
-use Olivermbs\LaravelEnumshare\Tests\TestCase;
+use Olivermbs\Enumshare\Concerns\SharesWithFrontend;
+use Olivermbs\Enumshare\Support\EnumAutoDiscovery;
+use Olivermbs\Enumshare\Support\EnumRegistry;
+use Olivermbs\Enumshare\Tests\TestCase;
 
 class EnumAutoDiscoveryTest extends TestCase
 {
@@ -144,8 +144,8 @@ class EnumAutoDiscoveryTest extends TestCase
 
 namespace {$namespace};
 
-use Olivermbs\\LaravelEnumshare\\Attributes\\Label;
-use Olivermbs\\LaravelEnumshare\\Concerns\\SharesWithFrontend;
+use Olivermbs\\Enumshare\\Attributes\\Label;
+use Olivermbs\\Enumshare\\Concerns\\SharesWithFrontend;
 enum {$enumName}: string
 {
     use SharesWithFrontend;

@@ -1,7 +1,7 @@
 <?php
 
-use Olivermbs\LaravelEnumshare\Exceptions\InvalidEnumException;
-use Olivermbs\LaravelEnumshare\Support\EnumValidator;
+use Olivermbs\Enumshare\Exceptions\InvalidEnumException;
+use Olivermbs\Enumshare\Support\EnumValidator;
 
 require_once __DIR__.'/../Fixtures/TestEnum.php';
 
@@ -10,10 +10,10 @@ beforeEach(function () {
 });
 
 it('validates a valid enum successfully', function () {
-    expect($this->validator->isValidEnumForExport('Olivermbs\\LaravelEnumshare\\Tests\\Fixtures\\TestEnum'))->toBeTrue();
+    expect($this->validator->isValidEnumForExport('Olivermbs\\Enumshare\\Tests\\Fixtures\\TestEnum'))->toBeTrue();
 
     // Should not throw exception
-    $this->validator->validateEnumForExport('Olivermbs\\LaravelEnumshare\\Tests\\Fixtures\\TestEnum');
+    $this->validator->validateEnumForExport('Olivermbs\\Enumshare\\Tests\\Fixtures\\TestEnum');
     expect(true)->toBeTrue(); // Test passes if no exception thrown
 });
 
@@ -45,7 +45,7 @@ it('rejects enums without SharesWithFrontend trait', function () {
 
 it('validates multiple enums and returns results', function () {
     $enums = [
-        'Olivermbs\\LaravelEnumshare\\Tests\\Fixtures\\TestEnum',                // Valid
+        'Olivermbs\\Enumshare\\Tests\\Fixtures\\TestEnum',                // Valid
         'NonExistentClass',          // Invalid - doesn't exist
         'stdClass',                  // Invalid - not an enum
     ];
@@ -55,7 +55,7 @@ it('validates multiple enums and returns results', function () {
     expect($result)->toHaveKey('valid');
     expect($result)->toHaveKey('errors');
 
-    expect($result['valid'])->toContain('Olivermbs\\LaravelEnumshare\\Tests\\Fixtures\\TestEnum');
+    expect($result['valid'])->toContain('Olivermbs\\Enumshare\\Tests\\Fixtures\\TestEnum');
     expect($result['valid'])->toHaveCount(1);
 
     expect($result['errors'])->toHaveKey('NonExistentClass');
@@ -74,7 +74,7 @@ it('handles empty enum validation', function () {
 });
 
 it('handles all valid enums', function () {
-    $enums = ['Olivermbs\\LaravelEnumshare\\Tests\\Fixtures\\TestEnum'];
+    $enums = ['Olivermbs\\Enumshare\\Tests\\Fixtures\\TestEnum'];
 
     $result = $this->validator->validateMultipleEnumsForExport($enums);
 

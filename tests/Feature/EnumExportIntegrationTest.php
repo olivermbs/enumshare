@@ -1,13 +1,13 @@
 <?php
 
 use Illuminate\Support\Facades\File;
-use Olivermbs\LaravelEnumshare\LaravelEnumshareServiceProvider;
+use Olivermbs\Enumshare\EnumshareServiceProvider;
 
 require_once __DIR__.'/../Fixtures/TestEnum.php';
 require_once __DIR__.'/../Fixtures/MultilingualTestEnum.php';
 
 beforeEach(function () {
-    $this->app->register(LaravelEnumshareServiceProvider::class);
+    $this->app->register(EnumshareServiceProvider::class);
 
     // Set up a test directory for generated files
     $this->testOutputDir = sys_get_temp_dir().'/enum-test-'.uniqid();
@@ -23,11 +23,11 @@ afterEach(function () {
 
 it('generates valid TypeScript files for enums', function () {
     // Configure test enum
-    config(['enumshare.enums' => ['Olivermbs\\LaravelEnumshare\\Tests\\Fixtures\\TestEnum']]);
+    config(['enumshare.enums' => ['Olivermbs\\Enumshare\\Tests\\Fixtures\\TestEnum']]);
     config(['enumshare.path' => $this->testOutputDir]);
 
-    // Run export command
-    $this->artisan('enums:export')
+    // Run export command with --types flag to export types
+    $this->artisan('enums:export', ['--types' => true])
         ->assertExitCode(0);
 
     // Verify file was created (uses short name, not full namespace)
@@ -37,12 +37,11 @@ it('generates valid TypeScript files for enums', function () {
     // Verify content structure
     $content = File::get($filePath);
     expect($content)->toContain('export type TestEnumMeta');
-    expect($content)->toContain('export type TestEnumEntry');
-    expect($content)->toContain('export type TestEnumOption');
+    expect($content)->toContain('export type TestEnumKey');
+    expect($content)->toContain('export type TestEnumValue');
     expect($content)->toContain('export const TestEnum');
-    expect($content)->toContain('// Precomputed lookup maps for O(1) access');
-    expect($content)->toContain('// Lookup methods');
-    expect($content)->toContain('// Type guard methods');
+    expect($content)->toContain('from(value:');
+    expect($content)->toContain('isValid(value:');
 });
 
 it('handles export command with invalid enum gracefully', function () {
@@ -64,34 +63,32 @@ it('handles export command with invalid enum gracefully', function () {
 it('handles directory creation errors gracefully', function () {
     // Try to export to an invalid directory (read-only parent)
     $invalidDir = '/root/enum-test-'.uniqid();
-    config(['enumshare.enums' => ['Olivermbs\\LaravelEnumshare\\Tests\\Fixtures\\TestEnum']]);
+    config(['enumshare.enums' => ['Olivermbs\\Enumshare\\Tests\\Fixtures\\TestEnum']]);
     config(['enumshare.path' => $invalidDir]);
 
     $this->artisan('enums:export')
         ->assertExitCode(1)
         ->expectsOutputToContain('Export failed: Failed to create directory:');
-});
+})->skip(PHP_OS_FAMILY === 'Windows', 'Test requires Unix filesystem permissions');
 
 it('exports enums with custom methods correctly', function () {
     // Test with enum that has custom methods
-    config(['enumshare.enums' => ['Olivermbs\\LaravelEnumshare\\Tests\\Fixtures\\TestEnum']]);
+    config(['enumshare.enums' => ['Olivermbs\\Enumshare\\Tests\\Fixtures\\TestEnum']]);
     config(['enumshare.path' => $this->testOutputDir]);
 
     $this->artisan('enums:export')->assertExitCode(0);
 
     $content = File::get($this->testOutputDir.'/TestEnum.ts');
 
-    // Should contain generated type definition with proper structure
-    expect($content)->toContain('TestEnumEntry');
-    expect($content)->toContain('readonly key:');
-    expect($content)->toContain('readonly value:');
-    expect($content)->toContain('readonly label:');
-    expect($content)->toContain('readonly meta:');
+    // Should contain basic structure
+    expect($content)->toContain('export const TestEnum');
+    expect($content)->toContain("key: 'Active'");
+    expect($content)->toContain('from(value:');
 });
 
 it('exports multilingual enums correctly', function () {
     // Configure for multilingual support
-    config(['enumshare.enums' => ['Olivermbs\\LaravelEnumshare\\Tests\\Fixtures\\MultilingualTestEnum']]);
+    config(['enumshare.enums' => ['Olivermbs\\Enumshare\\Tests\\Fixtures\\MultilingualTestEnum']]);
     config(['enumshare.path' => $this->testOutputDir]);
     config(['enumshare.locales' => ['en', 'es']]);
 
@@ -106,7 +103,7 @@ it('exports multilingual enums correctly', function () {
 
 it('validates enum configuration before export', function () {
     // Mix of valid and invalid enums
-    config(['enumshare.enums' => ['Olivermbs\\LaravelEnumshare\\Tests\\Fixtures\\TestEnum', 'NonExistentEnum', 'InvalidClass']]);
+    config(['enumshare.enums' => ['Olivermbs\\Enumshare\\Tests\\Fixtures\\TestEnum', 'NonExistentEnum', 'InvalidClass']]);
     config(['enumshare.path' => $this->testOutputDir]);
 
     $result = $this->artisan('enums:export');
@@ -120,13 +117,13 @@ it('validates enum configuration before export', function () {
 
 it('provides verbose error output when requested', function () {
     // Create scenario that will cause an exception during generation
-    config(['enumshare.enums' => ['Olivermbs\\LaravelEnumshare\\Tests\\Fixtures\\TestEnum']]);
+    config(['enumshare.enums' => ['Olivermbs\\Enumshare\\Tests\\Fixtures\\TestEnum']]);
     config(['enumshare.path' => '/root/invalid/path/that/cannot/be/created']);
 
     $this->artisan('enums:export', ['-v' => true])
         ->assertExitCode(1)
         ->expectsOutputToContain('Export failed');
-});
+})->skip(PHP_OS_FAMILY === 'Windows', 'Test requires Unix filesystem permissions');
 
 it('handles empty enum configuration gracefully', function () {
     config(['enumshare.enums' => []]);
@@ -140,7 +137,7 @@ it('handles empty enum configuration gracefully', function () {
 });
 
 it('generates files with proper TypeScript syntax', function () {
-    config(['enumshare.enums' => ['Olivermbs\\LaravelEnumshare\\Tests\\Fixtures\\TestEnum']]);
+    config(['enumshare.enums' => ['Olivermbs\\Enumshare\\Tests\\Fixtures\\TestEnum']]);
     config(['enumshare.path' => $this->testOutputDir]);
 
     $this->artisan('enums:export')->assertExitCode(0);
@@ -148,7 +145,7 @@ it('generates files with proper TypeScript syntax', function () {
     $content = File::get($this->testOutputDir.'/TestEnum.ts');
 
     // Basic TypeScript syntax checks
-    expect($content)->toMatch('/export\s+type\s+\w+/'); // Has type exports
+    expect($content)->toMatch('/type\s+\w+/'); // Has type definitions
     expect($content)->toMatch('/export\s+const\s+\w+/'); // Has const exports
     expect($content)->toContain('readonly '); // Uses readonly properties
     expect($content)->toContain('as const'); // Uses const assertions

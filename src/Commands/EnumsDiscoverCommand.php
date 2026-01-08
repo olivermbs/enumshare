@@ -1,9 +1,9 @@
 <?php
 
-namespace Olivermbs\LaravelEnumshare\Commands;
+namespace Olivermbs\Enumshare\Commands;
 
 use Illuminate\Console\Command;
-use Olivermbs\LaravelEnumshare\Support\EnumAutoDiscovery;
+use Olivermbs\Enumshare\Support\EnumAutoDiscovery;
 
 class EnumsDiscoverCommand extends Command
 {
@@ -30,7 +30,7 @@ class EnumsDiscoverCommand extends Command
         if (empty($discoveredEnums)) {
             $this->warn('No enums found that use the SharesWithFrontend trait.');
             $this->line('Make sure your enums:');
-            $this->line('  - Use Olivermbs\LaravelEnumshare\Concerns\SharesWithFrontend trait');
+            $this->line('  - Use Olivermbs\Enumshare\Concerns\SharesWithFrontend trait');
             $this->line('  - Are located in the configured paths');
 
             return self::SUCCESS;

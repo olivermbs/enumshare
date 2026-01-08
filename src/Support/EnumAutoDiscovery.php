@@ -1,17 +1,15 @@
 <?php
 
-namespace Olivermbs\LaravelEnumshare\Support;
+namespace Olivermbs\Enumshare\Support;
 
 use Illuminate\Support\Facades\File;
-use Olivermbs\LaravelEnumshare\Concerns\SharesWithFrontend;
-use ReflectionClass;
-use ReflectionException;
 use Symfony\Component\Finder\Finder;
 
 class EnumAutoDiscovery
 {
     public function __construct(
-        protected array $paths = []
+        protected array $paths = [],
+        protected ?EnumValidator $validator = null
     ) {}
 
     public function discover(): array
@@ -87,17 +85,10 @@ class EnumAutoDiscovery
 
     protected function isValidFrontendEnum(string $enumClass): bool
     {
-        if (! class_exists($enumClass)) {
-            return false;
+        if ($this->validator) {
+            return $this->validator->isValidEnumForExport($enumClass);
         }
 
-        try {
-            $reflection = new ReflectionClass($enumClass);
-
-            return $reflection->isEnum() &&
-                   in_array(SharesWithFrontend::class, $reflection->getTraitNames());
-        } catch (ReflectionException) {
-            return false;
-        }
+        return class_exists($enumClass);
     }
 }

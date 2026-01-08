@@ -1,11 +1,11 @@
 <?php
 
-use Olivermbs\LaravelEnumshare\Attributes\Label;
-use Olivermbs\LaravelEnumshare\Attributes\Meta;
-use Olivermbs\LaravelEnumshare\Attributes\TranslatedLabel;
-use Olivermbs\LaravelEnumshare\Concerns\SharesWithFrontend;
-use Olivermbs\LaravelEnumshare\Support\EnumRegistry;
-use Olivermbs\LaravelEnumshare\Tests\TestCase;
+use Olivermbs\Enumshare\Attributes\Label;
+use Olivermbs\Enumshare\Attributes\Meta;
+use Olivermbs\Enumshare\Attributes\TranslatedLabel;
+use Olivermbs\Enumshare\Concerns\SharesWithFrontend;
+use Olivermbs\Enumshare\Support\EnumRegistry;
+use Olivermbs\Enumshare\Tests\TestCase;
 
 enum TripStatus: string
 {

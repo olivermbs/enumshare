@@ -1,10 +1,10 @@
 <?php
 
-namespace Olivermbs\LaravelEnumshare\Tests\Fixtures;
+namespace Olivermbs\Enumshare\Tests\Fixtures;
 
-use Olivermbs\LaravelEnumshare\Attributes\Label;
-use Olivermbs\LaravelEnumshare\Attributes\Meta;
-use Olivermbs\LaravelEnumshare\Concerns\SharesWithFrontend;
+use Olivermbs\Enumshare\Attributes\Label;
+use Olivermbs\Enumshare\Attributes\Meta;
+use Olivermbs\Enumshare\Concerns\SharesWithFrontend;
 
 enum TestEnum: string
 {

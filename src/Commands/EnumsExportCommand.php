@@ -1,13 +1,13 @@
 <?php
 
-namespace Olivermbs\LaravelEnumshare\Commands;
+namespace Olivermbs\Enumshare\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-use Olivermbs\LaravelEnumshare\Exceptions\InvalidEnumException;
-use Olivermbs\LaravelEnumshare\Support\EnumRegistry;
-use Olivermbs\LaravelEnumshare\Support\EnumValidator;
-use Olivermbs\LaravelEnumshare\Support\TypeScriptEnumGenerator;
+use Olivermbs\Enumshare\Exceptions\InvalidEnumException;
+use Olivermbs\Enumshare\Support\EnumRegistry;
+use Olivermbs\Enumshare\Support\EnumValidator;
+use Olivermbs\Enumshare\Support\TypeScriptEnumGenerator;
 
 class EnumsExportCommand extends Command
 {
@@ -17,6 +17,7 @@ class EnumsExportCommand extends Command
                             {--format=typescript : Export format (typescript|json|both)}
                             {--index : Generate barrel index file}
                             {--types : Export TypeScript helper types}
+                            {--minimal : Generate minimal output without utility methods}
                             {--force : Force overwrite existing files}
                             {--dry-run : Show what would be generated without writing files}
                             {--validate : Validate generated TypeScript syntax}
@@ -135,7 +136,13 @@ class EnumsExportCommand extends Command
             try {
                 $this->line("Processing {$enumName}...");
 
-                $content = $this->generateIndividualEnumFile($enumName, $enumData, $generator, $this->option('types', false));
+                $content = $this->generateIndividualEnumFile(
+                    $enumName,
+                    $enumData,
+                    $generator,
+                    $this->option('types'),
+                    $this->option('minimal')
+                );
                 $filePath = "{$enumsDir}/{$enumName}.ts";
 
                 $contentSize = strlen($content);
@@ -153,10 +160,9 @@ class EnumsExportCommand extends Command
                     ];
                     $stats['skipped']++;
                 } else {
-                    $shouldWrite = $this->shouldWriteFile($filePath);
+                    $writeResult = $this->writeFileIfChanged($filePath, $content);
 
-                    if ($shouldWrite) {
-                        File::put($filePath, $content);
+                    if ($writeResult === 'written') {
                         $stats['details'][$enumName] = [
                             'status' => 'generated',
                             'size' => $contentSize,
@@ -168,6 +174,7 @@ class EnumsExportCommand extends Command
                             'status' => 'skipped',
                             'size' => $contentSize,
                             'path' => $filePath,
+                            'reason' => $writeResult,
                         ];
                         $stats['skipped']++;
                     }
@@ -192,13 +199,12 @@ class EnumsExportCommand extends Command
         return $stats;
     }
 
-    protected function generateIndividualEnumFile(string $enumName, array $enumData, TypeScriptEnumGenerator $generator, bool $exportTypes = false): string
+    protected function generateIndividualEnumFile(string $enumName, array $enumData, TypeScriptEnumGenerator $generator, bool $exportTypes = false, bool $minimal = false): string
     {
         try {
-            // Ensure meta properties are objects, not arrays
             $enumData = $this->ensureMetaIsObject($enumData);
 
-            return $generator->generate($enumName, $enumData, $exportTypes);
+            return $generator->generate($enumName, $enumData, $exportTypes, $minimal);
         } catch (\Exception $e) {
             throw new \RuntimeException("Failed to generate TypeScript for enum '{$enumName}': {$e->getMessage()}", 0, $e);
         }
@@ -217,22 +223,29 @@ class EnumsExportCommand extends Command
         return $enumData;
     }
 
-    protected function shouldWriteFile(string $filePath): bool
+    protected function writeFileIfChanged(string $filePath, string $content): string
     {
-        if ($this->option('force')) {
-            return true;
-        }
-
         if (! File::exists($filePath)) {
-            return true;
+            File::put($filePath, $content);
+
+            return 'written';
         }
 
-        // In non-interactive mode (like Vite/CI), default to overwrite
-        if (! $this->input->isInteractive()) {
-            return true;
+        $existingContent = File::get($filePath);
+
+        if (hash('xxh3', $existingContent) === hash('xxh3', $content)) {
+            return 'unchanged';
         }
 
-        return $this->confirm("File {$filePath} already exists. Overwrite?", false);
+        if (! $this->option('force') && $this->input->isInteractive()) {
+            if (! $this->confirm("File {$filePath} already exists. Overwrite?", false)) {
+                return 'user_declined';
+            }
+        }
+
+        File::put($filePath, $content);
+
+        return 'written';
     }
 
     protected function validateGeneratedContent(string $content, string $enumName): void

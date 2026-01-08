@@ -2,8 +2,8 @@
 
 namespace Tests;
 
-use Olivermbs\LaravelEnumshare\Attributes\ExportMethod;
-use Olivermbs\LaravelEnumshare\Concerns\SharesWithFrontend;
+use Olivermbs\Enumshare\Attributes\ExportMethod;
+use Olivermbs\Enumshare\Concerns\SharesWithFrontend;
 
 enum TestContactType: int
 {

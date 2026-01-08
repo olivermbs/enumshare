@@ -1,8 +1,7 @@
 <?php
 
-namespace Olivermbs\LaravelEnumshare\Support;
+namespace Olivermbs\Enumshare\Support;
 
-use Olivermbs\LaravelEnumshare\Concerns\SharesWithFrontend;
 use ReflectionClass;
 
 class EnumRegistry
@@ -29,12 +28,13 @@ class EnumRegistry
             $manifest[$shortName] = $enumClass::forFrontend($locale);
         }
 
+        ksort($manifest);
+
         return $manifest;
     }
 
     protected function getAllEnums(): array
     {
-        // Always merge constructor enums with config enums
         $configuredEnums = array_merge(
             $this->enums,
             config('enumshare.enums', [])
@@ -45,7 +45,10 @@ class EnumRegistry
             $discoveredEnums = $this->autoDiscovery->discover();
         }
 
-        return array_unique(array_merge($configuredEnums, $discoveredEnums));
+        $allEnums = array_unique(array_merge($configuredEnums, $discoveredEnums));
+        sort($allEnums);
+
+        return $allEnums;
     }
 
     protected function isAutoDiscoveryEnabled(): bool
@@ -59,14 +62,12 @@ class EnumRegistry
             return $this->validator->isValidEnumForExport($enumClass);
         }
 
-        // Fallback to basic validation if no validator provided
         if (! class_exists($enumClass)) {
             return false;
         }
 
         $reflection = new ReflectionClass($enumClass);
 
-        return $reflection->isEnum() &&
-               in_array(SharesWithFrontend::class, $reflection->getTraitNames());
+        return $reflection->isEnum();
     }
 }

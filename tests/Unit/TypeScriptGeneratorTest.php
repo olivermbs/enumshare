@@ -1,7 +1,7 @@
 <?php
 
-use Olivermbs\LaravelEnumshare\Support\TypeScriptEnumGenerator;
-use Olivermbs\LaravelEnumshare\Support\TypeScriptTypeResolver;
+use Olivermbs\Enumshare\Support\TypeScriptEnumGenerator;
+use Olivermbs\Enumshare\Support\TypeScriptTypeResolver;
 
 beforeEach(function () {
     $this->typeResolver = new TypeScriptTypeResolver;
@@ -32,14 +32,11 @@ it('generates TypeScript for simple string enum', function () {
         ],
     ];
 
-    $result = $this->generator->generate('Status', $enumData);
+    $result = $this->generator->generate(enumName: 'Status', enumData: $enumData, exportTypes: true);
 
-    expect($result)->toContain('export type StatusMeta = {');
-    expect($result)->toContain('readonly color: string;');
-    expect($result)->toContain('export type StatusEntry = {');
-    expect($result)->toContain("readonly key: 'Active' | 'Inactive';");
-    expect($result)->toContain('readonly value: string;');
-    expect($result)->toContain('readonly label: string;');
+    expect($result)->toContain('export type StatusMeta');
+    expect($result)->toContain('export type StatusKey');
+    expect($result)->toContain('export type StatusValue');
     expect($result)->toContain('export const Status = {');
     expect($result)->toContain("name: 'Status' as const,");
     expect($result)->toContain("fqcn: 'App\\\\Enums\\\\Status' as const,");
@@ -70,9 +67,9 @@ it('generates TypeScript for integer enum', function () {
         ],
     ];
 
-    $result = $this->generator->generate('Priority', $enumData);
+    $result = $this->generator->generate(enumName: 'Priority', enumData: $enumData, exportTypes: true);
 
-    expect($result)->toContain('readonly value: number;');
+    expect($result)->toContain('readonly value: PriorityValue;');
     expect($result)->toContain("backingType: 'int' as const");
     expect($result)->toContain('value: 1,');
     expect($result)->toContain('value: 10,');
@@ -102,7 +99,7 @@ it('generates TypeScript for pure enum without backing type', function () {
         ],
     ];
 
-    $result = $this->generator->generate('Direction', $enumData);
+    $result = $this->generator->generate(enumName: 'Direction', enumData: $enumData, exportTypes: true);
 
     expect($result)->toContain('readonly value: null;');
     expect($result)->toContain('backingType: null,');
@@ -167,7 +164,7 @@ it('generates proper meta types from complex metadata', function () {
         ],
     ];
 
-    $result = $this->generator->generate('Status', $enumData);
+    $result = $this->generator->generate(enumName: 'Status', enumData: $enumData, exportTypes: true);
 
     expect($result)->toContain('export type StatusMeta = {');
     expect($result)->toContain('readonly color: string;');
@@ -236,12 +233,5 @@ it('generates proper JSDoc documentation', function () {
 
     $result = $this->generator->generate('Status', $enumData);
 
-    expect($result)->toContain('/**');
-    expect($result)->toContain(' * Status enum generated from App\\Enums\\Status');
-    expect($result)->toContain(' * @example');
-    expect($result)->toContain(' * Status.Active.label');
-    expect($result)->toContain(' * Status.from(');
-    expect($result)->toContain(' * Status.keys //');
-    expect($result)->toContain(' * Status.isValid(');
-    expect($result)->toContain(' */');
+    expect($result)->toContain('/** Status - Generated from App\\Enums\\Status */');
 });

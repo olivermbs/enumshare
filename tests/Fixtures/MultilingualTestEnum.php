@@ -1,10 +1,10 @@
 <?php
 
-namespace Olivermbs\LaravelEnumshare\Tests\Fixtures;
+namespace Olivermbs\Enumshare\Tests\Fixtures;
 
-use Olivermbs\LaravelEnumshare\Attributes\Meta;
-use Olivermbs\LaravelEnumshare\Attributes\TranslatedLabel;
-use Olivermbs\LaravelEnumshare\Concerns\SharesWithFrontend;
+use Olivermbs\Enumshare\Attributes\Meta;
+use Olivermbs\Enumshare\Attributes\TranslatedLabel;
+use Olivermbs\Enumshare\Concerns\SharesWithFrontend;
 
 enum MultilingualTestEnum: string
 {

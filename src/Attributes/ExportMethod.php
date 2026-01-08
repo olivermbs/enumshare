@@ -1,6 +1,6 @@
 <?php
 
-namespace Olivermbs\LaravelEnumshare\Attributes;
+namespace Olivermbs\Enumshare\Attributes;
 
 use Attribute;
 

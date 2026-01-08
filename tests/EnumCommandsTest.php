@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\File;
-use Olivermbs\LaravelEnumshare\Tests\TestCase;
+use Olivermbs\Enumshare\Tests\TestCase;
 
 class EnumCommandsTest extends TestCase
 {
@@ -93,7 +93,7 @@ class EnumCommandsTest extends TestCase
 
 namespace App\\Enums;
 
-use Olivermbs\\LaravelEnumshare\\Concerns\\SharesWithFrontend;
+use Olivermbs\\Enumshare\\Concerns\\SharesWithFrontend;
 enum CommandTestEnum: string
 {
     use SharesWithFrontend;

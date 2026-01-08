@@ -1,12 +1,12 @@
 <?php
 
-namespace Olivermbs\LaravelEnumshare\Concerns;
+namespace Olivermbs\Enumshare\Concerns;
 
 use BackedEnum;
-use Olivermbs\LaravelEnumshare\Attributes\ExportMethod;
-use Olivermbs\LaravelEnumshare\Attributes\Label;
-use Olivermbs\LaravelEnumshare\Attributes\Meta;
-use Olivermbs\LaravelEnumshare\Attributes\TranslatedLabel;
+use Olivermbs\Enumshare\Attributes\ExportMethod;
+use Olivermbs\Enumshare\Attributes\Label;
+use Olivermbs\Enumshare\Attributes\Meta;
+use Olivermbs\Enumshare\Attributes\TranslatedLabel;
 use ReflectionClass;
 use ReflectionClassConstant;
 use ReflectionMethod;

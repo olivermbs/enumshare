@@ -1,6 +1,6 @@
 <?php
 
-namespace Olivermbs\LaravelEnumshare\Support;
+namespace Olivermbs\Enumshare\Support;
 
 class TypeScriptTypeResolver
 {

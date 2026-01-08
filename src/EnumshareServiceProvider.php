@@ -1,19 +1,19 @@
 <?php
 
-namespace Olivermbs\LaravelEnumshare;
+namespace Olivermbs\Enumshare;
 
 use Illuminate\Support\ServiceProvider;
-use Olivermbs\LaravelEnumshare\Commands\EnumsDiscoverCommand;
-use Olivermbs\LaravelEnumshare\Commands\EnumsExportAllLocalesCommand;
-use Olivermbs\LaravelEnumshare\Commands\EnumsExportCommand;
-use Olivermbs\LaravelEnumshare\Commands\EnumsWatchCommand;
-use Olivermbs\LaravelEnumshare\Support\EnumAutoDiscovery;
-use Olivermbs\LaravelEnumshare\Support\EnumRegistry;
-use Olivermbs\LaravelEnumshare\Support\EnumValidator;
-use Olivermbs\LaravelEnumshare\Support\TypeScriptEnumGenerator;
-use Olivermbs\LaravelEnumshare\Support\TypeScriptTypeResolver;
+use Olivermbs\Enumshare\Commands\EnumsDiscoverCommand;
+use Olivermbs\Enumshare\Commands\EnumsExportAllLocalesCommand;
+use Olivermbs\Enumshare\Commands\EnumsExportCommand;
+use Olivermbs\Enumshare\Commands\EnumsWatchCommand;
+use Olivermbs\Enumshare\Support\EnumAutoDiscovery;
+use Olivermbs\Enumshare\Support\EnumRegistry;
+use Olivermbs\Enumshare\Support\EnumValidator;
+use Olivermbs\Enumshare\Support\TypeScriptEnumGenerator;
+use Olivermbs\Enumshare\Support\TypeScriptTypeResolver;
 
-class LaravelEnumshareServiceProvider extends ServiceProvider
+class EnumshareServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
@@ -25,7 +25,8 @@ class LaravelEnumshareServiceProvider extends ServiceProvider
 
         $this->app->singleton(EnumAutoDiscovery::class, function ($app) {
             return new EnumAutoDiscovery(
-                config('enumshare.auto_paths', [])
+                config('enumshare.auto_paths', []),
+                $app->make(EnumValidator::class)
             );
         });
 
