@@ -39,7 +39,7 @@ enum TestContactType: int
 }
 
 it('exports custom method results as properties', function () {
-    $extractor = new EnumExtractor();
+    $extractor = new EnumExtractor;
     $result = $extractor->extract(TestContactType::class);
 
     expect($result)->toHaveKey('entries');

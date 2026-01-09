@@ -8,6 +8,6 @@ use Attribute;
 class ExportMethod
 {
     public function __construct(
-        public ?string $name = null
+        public readonly ?string $name = null
     ) {}
 }

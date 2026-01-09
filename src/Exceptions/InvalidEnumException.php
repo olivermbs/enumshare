@@ -24,8 +24,8 @@ class InvalidEnumException extends Exception
     public static function duplicateShortName(string $shortName, string $firstClass, string $secondClass): self
     {
         return new self(
-            "Enum name collision: '{$shortName}' is used by both {$firstClass} and {$secondClass}. " .
-            "Use unique enum names or configure specific enums in config/enumshare.php."
+            "Enum name collision: '{$shortName}' is used by both {$firstClass} and {$secondClass}. ".
+            'Use unique enum names or configure specific enums in config/enumshare.php.'
         );
     }
 

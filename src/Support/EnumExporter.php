@@ -3,14 +3,13 @@
 namespace Olivermbs\Enumshare\Support;
 
 use Illuminate\Support\Facades\File;
-use Olivermbs\Enumshare\Exceptions\InvalidEnumException;
+use Olivermbs\Enumshare\Exceptions\ExportException;
 
 class EnumExporter
 {
     public function __construct(
         protected EnumRegistry $registry,
-        protected TypeScriptEnumGenerator $generator,
-        protected EnumValidator $validator
+        protected TypeScriptEnumGenerator $generator
     ) {}
 
     public function export(array $options): array
@@ -47,7 +46,7 @@ class EnumExporter
 
         $this->ensureDirectoryExists($path);
 
-        $stats = $this->writeIndividualEnumFiles($manifest, $path, $exportTypes, $force);
+        $stats = $this->writeEnumFiles($manifest, $path, $exportTypes, $force);
 
         if ($index) {
             $this->generateIndexFile($path, $manifest);
@@ -69,11 +68,9 @@ class EnumExporter
             $configWarnings[] = 'No enums configured and auto-discovery is disabled.';
         }
 
-        $enumErrors = [];
-        if (! empty($configuredEnums)) {
-            $validation = $this->validator->validateMultipleEnumsForExport($configuredEnums);
-            $enumErrors = $validation['errors'] ?? [];
-        }
+        $enumErrors = ! empty($configuredEnums)
+            ? $this->registry->validateEnums($configuredEnums)
+            : [];
 
         return [
             'config' => $configWarnings,
@@ -86,66 +83,50 @@ class EnumExporter
         if (! File::isDirectory($directory)) {
             try {
                 File::makeDirectory($directory, 0755, true);
-            } catch (\Exception $e) {
-                throw new \RuntimeException("Failed to create directory: {$directory}", 0, $e);
+            } catch (\Throwable $e) {
+                throw ExportException::directoryCreationFailed($directory, $e);
             }
         }
     }
 
-    protected function writeIndividualEnumFiles(array $manifest, string $enumsDir, bool $exportTypes, bool $force): array
+    protected function writeEnumFiles(array $manifest, string $enumsDir, bool $exportTypes, bool $force): array
     {
-        $stats = [
-            'mode' => 'export',
-            'generated' => 0,
-            'skipped' => 0,
-        ];
-
+        $stats = ['mode' => 'export', 'generated' => 0, 'skipped' => 0];
         $mode = config('enumshare.mode', 'full');
 
         foreach ($manifest as $enumName => $enumData) {
             $content = $this->generator->generate($enumName, $enumData, $exportTypes, $mode);
             $filePath = "{$enumsDir}/{$enumName}.ts";
 
-            if (! $this->writeFileIfChanged($filePath, $content, $force)) {
+            if ($this->shouldSkipFile($filePath, $content, $force)) {
                 $stats['skipped']++;
-                continue;
+            } else {
+                File::put($filePath, $content);
+                $stats['generated']++;
             }
-
-            $stats['generated']++;
         }
 
         return $stats;
     }
 
-    protected function writeFileIfChanged(string $filePath, string $content, bool $force): bool
+    protected function shouldSkipFile(string $filePath, string $content, bool $force): bool
     {
-        if (File::exists($filePath) && ! $force) {
-            $existingContent = File::get($filePath);
-
-            if (hash('xxh3', $existingContent) === hash('xxh3', $content)) {
-                return false;
-            }
+        if ($force || ! File::exists($filePath)) {
+            return false;
         }
 
-        File::put($filePath, $content);
-
-        return true;
+        return hash('xxh3', File::get($filePath)) === hash('xxh3', $content);
     }
 
     protected function generateIndexFile(string $enumsDir, array $manifest): void
     {
-        $lines = [
-            '// Auto-generated barrel file for enum exports',
-            '// This file is auto-generated. Do not edit manually.',
-            '',
-        ];
+        $exports = array_map(
+            fn ($name) => "export { {$name} } from './{$name}';",
+            array_keys($manifest)
+        );
 
-        foreach (array_keys($manifest) as $enumName) {
-            $lines[] = "export { {$enumName} } from './{$enumName}';";
-        }
+        $content = "// Auto-generated. Do not edit.\n\n".implode("\n", $exports)."\n";
 
-        $lines[] = '';
-
-        File::put("{$enumsDir}/index.ts", implode("\n", $lines));
+        File::put("{$enumsDir}/index.ts", $content);
     }
 }

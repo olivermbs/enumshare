@@ -4,7 +4,6 @@ namespace Olivermbs\Enumshare\Support;
 
 class TypeScriptEnumGenerator
 {
-
     public function generate(string $enumName, array $enumData, bool $exportTypes = false, string $mode = 'full'): string
     {
         $entries = $enumData['entries'];
@@ -18,60 +17,88 @@ class TypeScriptEnumGenerator
 
     protected function generateMinimal(string $enumName, string $fqcn, ?string $backingType, array $entries): string
     {
-        $lines = [];
-        $lines[] = '/* eslint-disable */';
-        $lines[] = "// Auto-generated from {$fqcn}";
-        $lines[] = '';
+        $values = $this->buildMinimalValues($entries, $backingType);
 
-        // Build the const object
-        $lines[] = "export const {$enumName} = {";
-        foreach ($entries as $entry) {
-            $value = $backingType
-                ? $this->formatValue($entry['value'], $backingType)
-                : "'" . addslashes($entry['key']) . "'";
-            $lines[] = "  {$entry['key']}: {$value},";
-        }
-        $lines[] = '} as const;';
-        $lines[] = '';
+        return $this->dedent(<<<TS
+        /* eslint-disable */
+        // Auto-generated from {$fqcn}
 
-        // Type derived from the const
-        $lines[] = "export type {$enumName} = typeof {$enumName}[keyof typeof {$enumName}];";
-        $lines[] = '';
+        export const {$enumName} = {
+        {$values}
+        } as const;
 
-        return implode("\n", $lines);
+        export type {$enumName} = typeof {$enumName}[keyof typeof {$enumName}];
+        TS);
     }
 
     protected function generateFull(string $enumName, string $fqcn, ?string $backingType, array $entries, bool $exportTypes): string
     {
-        $labelAnalysis = $this->analyzeLabelTypes($entries);
-        $metaTypes = $this->analyzeMetaTypes($entries);
-        $export = $exportTypes ? 'export ' : '';
-        $isMultilingual = $labelAnalysis['isMultilingual'];
+        $isMultilingual = $this->hasMultilingualLabels($entries);
+        $metaType = $this->buildMetaType($enumName, $entries, $exportTypes);
+        $entriesConst = $this->buildEntriesConstant($entries, $backingType, $isMultilingual);
+        $types = $this->buildTypes($enumName, $backingType, $isMultilingual, $exportTypes);
+        $derived = $this->buildDerivedConstants($enumName, $backingType, $isMultilingual);
+        $entryConsts = $this->buildEntryConstants($entries);
+        $labelHelper = $isMultilingual ? $this->buildLabelHelper() : '';
+        $entryRefs = $this->buildEntryReferences($entries);
+        $methods = $this->buildUtilityMethods($enumName, $backingType, $isMultilingual);
 
-        $lines = [];
-        $lines[] = '/* eslint-disable */';
-        $lines[] = '// Auto-generated. Do not edit.';
-        $lines[] = '';
+        return $this->dedent(<<<TS
+        /* eslint-disable */
+        // Auto-generated from {$fqcn}
 
-        // Meta type
-        $lines[] = $this->buildMetaType($enumName, $metaTypes, $export);
+        {$metaType}
+        {$entriesConst}
+        {$types}
+        {$derived}
+        {$entryConsts}
+        {$labelHelper}
+        export const {$enumName} = {
+        {$entryRefs}
+          entries: ENTRIES,
+          keys: KEYS,
+          values: VALUES,
+          options: OPTIONS,
+          count: ENTRIES.length,
+        {$methods}
+        }
+        TS);
+    }
 
-        // Entries constant
-        $lines[] = $this->buildEntriesConstant($entries, $backingType, $isMultilingual);
+    protected function dedent(string $text): string
+    {
+        $lines = explode("\n", $text);
+        $minIndent = PHP_INT_MAX;
 
-        // Types
-        $lines[] = $this->buildTypes($enumName, $backingType, $labelAnalysis['unionType'], $export);
-
-        // Derived constants
-        $lines[] = $this->buildDerivedConstants($enumName, $backingType, $entries, $isMultilingual);
-
-        // Label helper for multilingual
-        if ($isMultilingual) {
-            $lines[] = $this->buildLabelHelper();
+        foreach ($lines as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+            $indent = strlen($line) - strlen(ltrim($line));
+            $minIndent = min($minIndent, $indent);
         }
 
-        // Main enum object
-        $lines[] = $this->buildMainObject($enumName, $fqcn, $backingType, $entries, $isMultilingual);
+        if ($minIndent === PHP_INT_MAX || $minIndent === 0) {
+            return $text;
+        }
+
+        $result = array_map(
+            fn ($line) => trim($line) === '' ? '' : substr($line, $minIndent),
+            $lines
+        );
+
+        return implode("\n", $result);
+    }
+
+    protected function buildMinimalValues(array $entries, ?string $backingType): string
+    {
+        $lines = [];
+        foreach ($entries as $entry) {
+            $value = $backingType
+                ? $this->formatValue($entry['value'], $backingType)
+                : "'".addslashes($entry['key'])."'";
+            $lines[] = "  {$entry['key']}: {$value},";
+        }
 
         return implode("\n", $lines);
     }
@@ -83,110 +110,133 @@ class TypeScriptEnumGenerator
         }
 
         if ($backingType === 'string') {
-            $escaped = addslashes((string) $value);
-
-            return "'{$escaped}'";
+            return "'".addslashes((string) $value)."'";
         }
 
         return (string) $value;
     }
 
-    protected function buildMetaType(string $enumName, array $metaTypes, string $export): string
+    protected function hasMultilingualLabels(array $entries): bool
     {
+        foreach ($entries as $entry) {
+            if (is_array($entry['label'])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function buildMetaType(string $enumName, array $entries, bool $exportTypes): string
+    {
+        $export = $exportTypes ? 'export ' : '';
+        $metaTypes = [];
+
+        foreach ($entries as $entry) {
+            if (! is_array($entry['meta']) || empty($entry['meta'])) {
+                continue;
+            }
+            foreach ($entry['meta'] as $key => $value) {
+                $metaTypes[$key][] = $this->phpToTsType($value);
+            }
+        }
+
         if (empty($metaTypes)) {
             return "{$export}type {$enumName}Meta = Record<string, unknown>;";
         }
 
-        $lines = ["{$export}type {$enumName}Meta = {"];
-        foreach ($metaTypes as $prop => $types) {
-            $lines[] = "  readonly {$prop}: " . implode(' | ', $types) . ';';
+        $props = [];
+        foreach ($metaTypes as $key => $types) {
+            $union = implode(' | ', array_unique($types));
+            $props[] = "  readonly {$key}: {$union};";
         }
-        $lines[] = '};';
+        $propsStr = implode("\n", $props);
 
-        return implode("\n", $lines);
+        return "{$export}type {$enumName}Meta = {\n{$propsStr}\n};";
+    }
+
+    protected function phpToTsType(mixed $value): string
+    {
+        return match (true) {
+            is_null($value) => 'null',
+            is_bool($value) => 'boolean',
+            is_int($value), is_float($value) => 'number',
+            is_string($value) => 'string',
+            is_array($value) && empty($value) => 'Record<string, unknown>',
+            is_array($value) && array_is_list($value) => $this->phpToTsType($value[0]).'[]',
+            is_array($value) => 'Record<string, unknown>',
+            default => 'unknown',
+        };
     }
 
     protected function buildEntriesConstant(array $entries, ?string $backingType, bool $isMultilingual): string
     {
-        $lines = ['const ENTRIES = ['];
-
+        $items = [];
         foreach ($entries as $entry) {
-            $lines[] = '  {';
-            $lines[] = "    key: '{$entry['key']}',";
-            $lines[] = '    value: ' . $this->formatValue($entry['value'], $backingType) . ',';
+            $value = $this->formatValue($entry['value'], $backingType);
+            $label = $isMultilingual
+                ? json_encode($entry['label'])
+                : "'".addslashes($entry['label'])."'";
+            $meta = empty($entry['meta']) ? '{}' : json_encode($entry['meta']);
 
-            if ($isMultilingual) {
-                $lines[] = '    label: ' . json_encode($entry['label']) . ',';
-            } else {
-                $lines[] = "    label: '" . addslashes($entry['label']) . "',";
-            }
-
-            $lines[] = '    meta: ' . json_encode($entry['meta']) . ',';
-            $lines[] = '  },';
+            $items[] = "  { key: '{$entry['key']}', value: {$value}, label: {$label}, meta: {$meta} },";
         }
 
-        $lines[] = '] as const;';
-
-        return implode("\n", $lines);
+        return "const ENTRIES = [\n".implode("\n", $items)."\n] as const;";
     }
 
-    protected function buildTypes(string $enumName, ?string $backingType, string $labelType, string $export): string
+    protected function buildTypes(string $enumName, ?string $backingType, bool $isMultilingual, bool $exportTypes): string
     {
-        $valueType = $backingType ? "{$enumName}Value" : 'null';
+        $export = $exportTypes ? 'export ' : '';
+        $labelType = $isMultilingual ? 'string | Record<string, string>' : 'string';
+        $valueType = $backingType ? "{$enumName}Value" : "{$enumName}Key";
 
-        $lines = [];
-        $lines[] = "{$export}type {$enumName}Entry = Omit<typeof ENTRIES[number], 'label' | 'meta' | 'value'> & {";
-        $lines[] = "  readonly value: {$valueType};";
-        $lines[] = "  readonly label: {$labelType};";
-        $lines[] = "  readonly meta: {$enumName}Meta;";
-        $lines[] = '};';
+        $valueTypeDef = $backingType
+            ? "{$export}type {$enumName}Value = NonNullable<typeof ENTRIES[number]['value']>;"
+            : "{$export}type {$enumName}Value = {$enumName}Key;";
 
-        $lines[] = "{$export}type {$enumName}Key = typeof ENTRIES[number]['key'];";
+        $entryValueType = $backingType ? "{$enumName}Value" : 'null';
 
-        if ($backingType) {
-            $lines[] = "{$export}type {$enumName}Value = NonNullable<typeof ENTRIES[number]['value']>;";
-        } else {
-            $lines[] = "{$export}type {$enumName}Value = {$enumName}Key;";
-        }
-
-        $optionValueType = $backingType ? "{$enumName}Value" : "{$enumName}Key";
-        $lines[] = "{$export}type {$enumName}Option = {";
-        $lines[] = "  readonly value: {$optionValueType};";
-        $lines[] = '  readonly label: string;';
-        $lines[] = '};';
-
-        return implode("\n", $lines);
+        return <<<TS
+        {$export}type {$enumName}Entry = {
+          readonly key: {$enumName}Key;
+          readonly value: {$entryValueType};
+          readonly label: {$labelType};
+          readonly meta: {$enumName}Meta;
+        };
+        {$export}type {$enumName}Key = typeof ENTRIES[number]['key'];
+        {$valueTypeDef}
+        {$export}type {$enumName}Option = { readonly value: {$valueType}; readonly label: string; };
+        TS;
     }
 
-    protected function buildDerivedConstants(string $enumName, ?string $backingType, array $entries, bool $isMultilingual): string
+    protected function buildDerivedConstants(string $enumName, ?string $backingType, bool $isMultilingual): string
+    {
+        $labelExpr = $isMultilingual ? 'resolveLabel(e.label)' : 'e.label';
+
+        if ($backingType) {
+            return <<<TS
+            const KEYS: readonly {$enumName}Key[] = ENTRIES.map(e => e.key);
+            const VALUES: readonly {$enumName}Value[] = ENTRIES.map(e => e.value!);
+            const OPTIONS: readonly {$enumName}Option[] = ENTRIES.map(e => ({ value: e.value!, label: {$labelExpr} }));
+            const BY_KEY = new Map(ENTRIES.map(e => [e.key, e]));
+            const BY_VALUE = new Map(ENTRIES.map(e => [e.value, e]));
+            TS;
+        }
+
+        return <<<TS
+        const KEYS: readonly {$enumName}Key[] = ENTRIES.map(e => e.key);
+        const VALUES: readonly {$enumName}Key[] = KEYS;
+        const OPTIONS: readonly {$enumName}Option[] = ENTRIES.map(e => ({ value: e.key, label: {$labelExpr} }));
+        const BY_KEY = new Map(ENTRIES.map(e => [e.key, e]));
+        TS;
+    }
+
+    protected function buildEntryConstants(array $entries): string
     {
         $lines = [];
-        $lines[] = '';
-        $lines[] = '// Derived constants';
-        $lines[] = "const KEYS: readonly {$enumName}Key[] = ENTRIES.map(e => e.key);";
-
-        if ($backingType) {
-            $lines[] = "const VALUES: readonly {$enumName}Value[] = ENTRIES.map(e => e.value).filter((v): v is {$enumName}Value => v !== null);";
-            $labelValue = $isMultilingual ? 'resolveLabel(e.label)' : 'e.label';
-            $lines[] = "const OPTIONS: ReadonlyArray<{$enumName}Option> = ENTRIES.filter((e): e is typeof ENTRIES[number] & { value: {$enumName}Value } => e.value !== null).map(e => ({ value: e.value, label: {$labelValue} }));";
-        } else {
-            $lines[] = "const VALUES: readonly {$enumName}Key[] = KEYS;";
-            $labelValue = $isMultilingual ? 'resolveLabel(e.label)' : 'e.label';
-            $lines[] = "const OPTIONS: ReadonlyArray<{$enumName}Option> = ENTRIES.map(e => ({ value: e.key, label: {$labelValue} }));";
-        }
-
-        $lines[] = '';
-        $lines[] = '// Lookup maps for O(1) access';
-        $lines[] = "const BY_KEY = new Map<{$enumName}Key, typeof ENTRIES[number]>(ENTRIES.map(e => [e.key, e]));";
-
-        if ($backingType) {
-            $lines[] = "const BY_VALUE = new Map<{$enumName}Value, typeof ENTRIES[number]>(ENTRIES.filter(e => e.value !== null).map(e => [e.value as {$enumName}Value, e]));";
-        }
-
-        $lines[] = '';
-        $lines[] = '// Individual entry constants';
-        foreach ($entries as $index => $entry) {
-            $lines[] = "const {$entry['key']}: typeof ENTRIES[number] = ENTRIES[{$index}];";
+        foreach ($entries as $i => $entry) {
+            $lines[] = "const {$entry['key']} = ENTRIES[{$i}];";
         }
 
         return implode("\n", $lines);
@@ -194,172 +244,48 @@ class TypeScriptEnumGenerator
 
     protected function buildLabelHelper(): string
     {
-        return implode("\n", [
-            '',
-            '// Locale-aware label resolution helper',
-            'function resolveLabel(label: string | Record<string, string>, locale?: string): string {',
-            "  if (typeof label === 'string') return label;",
-            '  if (locale && label[locale]) return label[locale];',
-            '  if (label.en) return label.en;',
-            '  const firstKey = Object.keys(label)[0];',
-            "  return firstKey ? label[firstKey] : '';",
-            '}',
-        ]);
+        return <<<'TS'
+        function resolveLabel(label: string | Record<string, string>, locale?: string): string {
+          if (typeof label === 'string') return label;
+          return (locale && label[locale]) || label.en || Object.values(label)[0] || '';
+        }
+        TS;
     }
 
-    protected function buildMainObject(string $enumName, string $fqcn, ?string $backingType, array $entries, bool $isMultilingual): string
+    protected function buildEntryReferences(array $entries): string
     {
-        $lines = [];
-        $lines[] = '';
-        $lines[] = "/** {$enumName} - Generated from {$fqcn} */";
-        $lines[] = '';
-        $lines[] = "export const {$enumName} = {";
-        $lines[] = "  name: '{$enumName}' as const,";
-        $lines[] = "  fqcn: '" . addslashes($fqcn) . "' as const,";
-        $lines[] = $backingType ? "  backingType: '{$backingType}' as const," : '  backingType: null,';
-        $lines[] = '';
-
+        $refs = [];
         foreach ($entries as $entry) {
-            $lines[] = "  {$entry['key']},";
+            $refs[] = "  {$entry['key']},";
         }
 
-        $lines[] = '';
-        $lines[] = '  // Collections (derived from ENTRIES)';
-        $lines[] = '  entries: ENTRIES,';
-        $lines[] = '  keys: KEYS,';
-        $lines[] = '  values: VALUES,';
-        $lines[] = '  options: OPTIONS,';
-        $lines[] = '  count: ENTRIES.length,';
-
-        $lines[] = $this->buildUtilityMethods($enumName, $backingType, $isMultilingual);
-
-        $lines[] = '}';
-        $lines[] = '';
-
-        return implode("\n", $lines);
+        return implode("\n", $refs);
     }
 
-    protected function analyzeLabelTypes(array $entries): array
-    {
-        $labelTypes = [];
-
-        foreach ($entries as $entry) {
-            $labelTypes[] = is_array($entry['label']) ? 'Record<string, string>' : 'string';
-        }
-
-        $labelTypes = array_unique($labelTypes);
-
-        return [
-            'unionType' => implode(' | ', $labelTypes),
-            'isMultilingual' => in_array('Record<string, string>', $labelTypes, true),
-        ];
-    }
-
-    protected function analyzeMetaTypes(array $entries): array
-    {
-        $metaTypes = [];
-
-        foreach ($entries as $entry) {
-            if (! isset($entry['meta']) || ! is_array($entry['meta'])) {
-                continue;
-            }
-
-            foreach ($entry['meta'] as $metaKey => $metaValue) {
-                $tsType = $this->phpToTypeScriptType($metaValue);
-                $metaTypes[$metaKey][] = $tsType;
-            }
-        }
-
-        foreach ($metaTypes as $key => $types) {
-            $metaTypes[$key] = array_values(array_unique($types));
-        }
-
-        return $metaTypes;
-    }
-
-    protected function phpToTypeScriptType(mixed $value): string
-    {
-        if (is_null($value)) {
-            return 'null';
-        }
-
-        if (is_bool($value)) {
-            return 'boolean';
-        }
-
-        if (is_int($value) || is_float($value)) {
-            return 'number';
-        }
-
-        if (is_string($value)) {
-            return 'string';
-        }
-
-        if (is_array($value)) {
-            if (empty($value)) {
-                return 'Record<string, unknown>';
-            }
-
-            if (array_keys($value) === range(0, count($value) - 1)) {
-                $firstType = $this->phpToTypeScriptType($value[0]);
-
-                return $firstType.'[]';
-            }
-
-            return 'Record<string, any>';
-        }
-
-        return 'unknown';
-    }
     protected function buildUtilityMethods(string $enumName, ?string $backingType, bool $isMultilingual): string
     {
-        $lines = [];
-        $lines[] = '';
+        $valueType = $backingType === 'string' ? 'string' : ($backingType ? 'number' : 'string');
+        $typeCheck = $backingType === 'string' ? 'string' : ($backingType ? 'number' : 'string');
+        $entryType = 'typeof ENTRIES[number]';
 
-        // from() method
-        if ($backingType) {
-            $valueType = $backingType === 'string' ? 'string' : 'number';
-            $lines[] = "  from(value: {$valueType} | null | undefined): typeof ENTRIES[number] | null {";
-            $lines[] = '    if (value == null) return null;';
-            $lines[] = "    return BY_VALUE.get(value as {$enumName}Value) ?? null;";
-        } else {
-            $lines[] = '  from(value: string | null | undefined): typeof ENTRIES[number] | null {';
-            $lines[] = '    if (value == null) return null;';
-            $lines[] = "    return BY_KEY.get(value as {$enumName}Key) ?? null;";
-        }
-        $lines[] = '  },';
+        $fromMethod = $backingType
+            ? "from(value: {$valueType} | null | undefined): {$entryType} | null { return value == null ? null : BY_VALUE.get(value) ?? null; },"
+            : "from(value: string | null | undefined): {$entryType} | null { return value == null ? null : BY_KEY.get(value as {$enumName}Key) ?? null; },";
 
-        // fromKey() method
-        $lines[] = '  fromKey(key: string | null | undefined): typeof ENTRIES[number] | null {';
-        $lines[] = '    if (key == null) return null;';
-        $lines[] = "    return BY_KEY.get(key as {$enumName}Key) ?? null;";
-        $lines[] = '  },';
+        $isValidMethod = $backingType
+            ? "isValid(value: unknown): value is {$enumName}Value { return typeof value === '{$typeCheck}' && BY_VALUE.has(value as {$enumName}Value); },"
+            : "isValid(value: unknown): value is {$enumName}Key { return typeof value === 'string' && BY_KEY.has(value as {$enumName}Key); },";
 
-        // isValid() method
-        if ($backingType) {
-            $typeCheck = $backingType === 'string' ? 'string' : 'number';
-            $lines[] = "  isValid(value: unknown): value is {$enumName}Value {";
-            $lines[] = "    return typeof value === '{$typeCheck}' && BY_VALUE.has(value as {$enumName}Value);";
-        } else {
-            $lines[] = "  isValid(value: unknown): value is {$enumName}Key {";
-            $lines[] = "    return typeof value === 'string' && BY_KEY.has(value as {$enumName}Key);";
-        }
-        $lines[] = '  },';
+        $labelsMethod = $isMultilingual
+            ? 'labels(locale?: string): readonly string[] { return ENTRIES.map(e => resolveLabel(e.label, locale)); },'
+            : 'labels(): readonly string[] { return ENTRIES.map(e => e.label); },';
 
-        // hasKey() method
-        $lines[] = "  hasKey(key: unknown): key is {$enumName}Key {";
-        $lines[] = "    return typeof key === 'string' && BY_KEY.has(key as {$enumName}Key);";
-        $lines[] = '  },';
-
-        // labels() method
-        if ($isMultilingual) {
-            $lines[] = '  labels(locale?: string): readonly string[] {';
-            $lines[] = '    return ENTRIES.map(e => resolveLabel(e.label, locale));';
-            $lines[] = '  },';
-        } else {
-            $lines[] = '  labels(): readonly string[] { return ENTRIES.map(e => e.label); },';
-        }
-
-        return implode("\n", $lines);
+        return <<<TS
+          {$fromMethod}
+          fromKey(key: string | null | undefined): {$entryType} | null { return key == null ? null : BY_KEY.get(key as {$enumName}Key) ?? null; },
+          {$isValidMethod}
+          hasKey(key: unknown): key is {$enumName}Key { return typeof key === 'string' && BY_KEY.has(key as {$enumName}Key); },
+          {$labelsMethod}
+        TS;
     }
 }

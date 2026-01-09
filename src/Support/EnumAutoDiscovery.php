@@ -3,21 +3,16 @@
 namespace Olivermbs\Enumshare\Support;
 
 use Illuminate\Support\Facades\File;
+use ReflectionClass;
 use Symfony\Component\Finder\Finder;
 
 class EnumAutoDiscovery
 {
     public function __construct(
-        protected array $paths = [],
-        protected ?EnumValidator $validator = null
+        protected array $paths = []
     ) {}
 
     public function discover(): array
-    {
-        return $this->performDiscovery();
-    }
-
-    protected function performDiscovery(): array
     {
         $enums = [];
 
@@ -46,7 +41,7 @@ class EnumAutoDiscovery
             $enumClasses = $this->extractEnumClassesFromFile($file->getRealPath());
 
             foreach ($enumClasses as $enumClass) {
-                if ($this->isValidFrontendEnum($enumClass)) {
+                if ($this->isValidEnum($enumClass)) {
                     $enums[] = $enumClass;
                 }
             }
@@ -68,6 +63,7 @@ class EnumAutoDiscovery
 
             if ($token->id === T_NAMESPACE) {
                 $namespace = $this->parseNamespace($tokens, $i + 1);
+
                 continue;
             }
 
@@ -122,12 +118,12 @@ class EnumAutoDiscovery
         return null;
     }
 
-    protected function isValidFrontendEnum(string $enumClass): bool
+    protected function isValidEnum(string $enumClass): bool
     {
-        if ($this->validator) {
-            return $this->validator->isValidEnumForExport($enumClass);
+        try {
+            return class_exists($enumClass) && (new ReflectionClass($enumClass))->isEnum();
+        } catch (\Throwable) {
+            return false;
         }
-
-        return class_exists($enumClass);
     }
 }

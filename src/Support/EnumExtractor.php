@@ -22,25 +22,16 @@ class EnumExtractor
         $configuredLocales = config('enumshare.locales', []);
 
         $entries = [];
-        $options = [];
 
         foreach ($enumClass::cases() as $case) {
             $caseReflection = $reflection->getReflectionConstant($case->name);
-            $label = $this->resolveLabel($case, $caseReflection, $enumName, $effectiveLocale, $configuredLocales);
 
-            $entry = [
+            $entries[] = [
                 'key' => $case->name,
                 'value' => $isBacked ? $case->value : null,
-                'label' => $label,
+                'label' => $this->resolveLabel($case, $caseReflection, $enumName, $effectiveLocale, $configuredLocales),
                 'meta' => $this->resolveMeta($caseReflection),
                 ...$this->resolveCustomMethods($case, $reflection),
-            ];
-
-            $entries[] = $entry;
-
-            $options[] = [
-                'value' => $isBacked ? $case->value : $case->name,
-                'label' => is_array($label) ? ($label[$effectiveLocale] ?? reset($label)) : $label,
             ];
         }
 
@@ -49,7 +40,6 @@ class EnumExtractor
             'fqcn' => $enumClass,
             'backingType' => $backingType,
             'entries' => $entries,
-            'options' => $options,
         ];
     }
 
@@ -77,7 +67,7 @@ class EnumExtractor
         }
 
         // Check translation file
-        $langKey = config('enumshare.lang_namespace', 'enums') . ".{$enumName}.{$case->name}";
+        $langKey = config('enumshare.lang_namespace', 'enums').".{$enumName}.{$case->name}";
         $translation = trans($langKey, [], $locale);
 
         if ($translation !== $langKey) {
@@ -116,6 +106,7 @@ class EnumExtractor
                         'method' => $method->getName(),
                     ]);
                 }
+
                 continue;
             }
         }

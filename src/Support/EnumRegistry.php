@@ -9,16 +9,14 @@ class EnumRegistry
 {
     public function __construct(
         protected array $enums = [],
-        protected ?EnumAutoDiscovery $autoDiscovery = null,
-        protected ?EnumValidator $validator = null,
-        protected ?EnumExtractor $extractor = null
+        protected ?EnumAutoDiscovery $autoDiscovery = null
     ) {}
 
     public function manifest(?string $locale = null): array
     {
         $manifest = [];
         $seen = [];
-        $extractor = $this->extractor ?? new EnumExtractor();
+        $extractor = new EnumExtractor;
 
         foreach ($this->getAllEnums() as $enumClass) {
             if (! $this->isValidEnum($enumClass)) {
@@ -28,7 +26,6 @@ class EnumRegistry
             $reflection = new ReflectionClass($enumClass);
             $shortName = $reflection->getShortName();
 
-            // Detect duplicate short names
             if (isset($seen[$shortName])) {
                 throw InvalidEnumException::duplicateShortName($shortName, $seen[$shortName], $enumClass);
             }
@@ -42,19 +39,28 @@ class EnumRegistry
         return $manifest;
     }
 
+    public function validateEnums(array $enumClasses): array
+    {
+        $errors = [];
+
+        foreach ($enumClasses as $enumClass) {
+            $error = $this->getValidationError($enumClass);
+            if ($error) {
+                $errors[$enumClass] = $error;
+            }
+        }
+
+        return $errors;
+    }
+
     protected function getAllEnums(): array
     {
-        $configuredEnums = array_merge(
-            $this->enums,
-            config('enumshare.enums', [])
-        );
-
         $discoveredEnums = [];
         if ($this->autoDiscovery && config('enumshare.auto_discovery', false)) {
             $discoveredEnums = $this->autoDiscovery->discover();
         }
 
-        $allEnums = array_unique(array_merge($configuredEnums, $discoveredEnums));
+        $allEnums = array_unique(array_merge($this->enums, $discoveredEnums));
         sort($allEnums);
 
         return $allEnums;
@@ -62,10 +68,29 @@ class EnumRegistry
 
     protected function isValidEnum(string $enumClass): bool
     {
-        if ($this->validator) {
-            return $this->validator->isValidEnumForExport($enumClass);
+        return $this->getValidationError($enumClass) === null;
+    }
+
+    protected function getValidationError(string $enumClass): ?string
+    {
+        if (! class_exists($enumClass)) {
+            return "Enum class '{$enumClass}' does not exist.";
         }
 
-        return class_exists($enumClass) && (new ReflectionClass($enumClass))->isEnum();
+        try {
+            $reflection = new ReflectionClass($enumClass);
+
+            if (! $reflection->isEnum()) {
+                return "Class '{$enumClass}' is not an enum.";
+            }
+
+            if (empty($enumClass::cases())) {
+                return "Enum '{$enumClass}' has no cases to export.";
+            }
+        } catch (\Throwable $e) {
+            return "Failed to validate enum '{$enumClass}': {$e->getMessage()}";
+        }
+
+        return null;
     }
 }
