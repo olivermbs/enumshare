@@ -3,14 +3,12 @@
 use Olivermbs\Enumshare\Attributes\Label;
 use Olivermbs\Enumshare\Attributes\Meta;
 use Olivermbs\Enumshare\Attributes\TranslatedLabel;
-use Olivermbs\Enumshare\Concerns\SharesWithFrontend;
+use Olivermbs\Enumshare\Support\EnumExtractor;
 use Olivermbs\Enumshare\Support\EnumRegistry;
 use Olivermbs\Enumshare\Tests\TestCase;
 
 enum TripStatus: string
 {
-    use SharesWithFrontend;
-
     #[Label('Trip Saved')]
     #[Meta(['color' => 'gray', 'icon' => 'save'])]
     case Saved = 'saved';
@@ -24,8 +22,6 @@ enum TripStatus: string
 
 enum UserRole
 {
-    use SharesWithFrontend;
-
     case Admin;
     case User;
     case Guest;
@@ -33,8 +29,6 @@ enum UserRole
 
 enum OrderStatus: string
 {
-    use SharesWithFrontend;
-
     #[TranslatedLabel('orders.pending')]
     case Pending = 'pending';
 
@@ -47,9 +41,17 @@ enum OrderStatus: string
 
 class EnumExportTest extends TestCase
 {
+    protected EnumExtractor $extractor;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->extractor = new EnumExtractor();
+    }
+
     public function test_backed_enum_generates_correct_structure(): void
     {
-        $result = TripStatus::forFrontend();
+        $result = $this->extractor->extract(TripStatus::class);
 
         expect($result)
             ->toHaveKeys(['name', 'fqcn', 'backingType', 'entries', 'options'])
@@ -62,7 +64,7 @@ class EnumExportTest extends TestCase
 
     public function test_pure_enum_generates_correct_structure(): void
     {
-        $result = UserRole::forFrontend();
+        $result = $this->extractor->extract(UserRole::class);
 
         expect($result)
             ->toHaveKeys(['name', 'fqcn', 'backingType', 'entries', 'options'])
@@ -75,7 +77,7 @@ class EnumExportTest extends TestCase
 
     public function test_entry_structure_includes_all_fields(): void
     {
-        $result = TripStatus::forFrontend();
+        $result = $this->extractor->extract(TripStatus::class);
         $savedEntry = collect($result['entries'])->firstWhere('key', 'Saved');
 
         expect($savedEntry)
@@ -88,7 +90,7 @@ class EnumExportTest extends TestCase
 
     public function test_options_structure_for_backed_enum(): void
     {
-        $result = TripStatus::forFrontend();
+        $result = $this->extractor->extract(TripStatus::class);
         $savedOption = collect($result['options'])->firstWhere('value', 'saved');
 
         expect($savedOption)
@@ -99,7 +101,7 @@ class EnumExportTest extends TestCase
 
     public function test_options_structure_for_pure_enum(): void
     {
-        $result = UserRole::forFrontend();
+        $result = $this->extractor->extract(UserRole::class);
         $adminOption = collect($result['options'])->firstWhere('value', 'Admin');
 
         expect($adminOption)
@@ -110,7 +112,7 @@ class EnumExportTest extends TestCase
 
     public function test_label_resolution_with_attributes(): void
     {
-        $result = TripStatus::forFrontend();
+        $result = $this->extractor->extract(TripStatus::class);
         $savedEntry = collect($result['entries'])->firstWhere('key', 'Saved');
 
         expect($savedEntry['label'])->toBe('Trip Saved');
@@ -118,7 +120,7 @@ class EnumExportTest extends TestCase
 
     public function test_label_resolution_fallback_to_case_name(): void
     {
-        $result = TripStatus::forFrontend();
+        $result = $this->extractor->extract(TripStatus::class);
         $cancelledEntry = collect($result['entries'])->firstWhere('key', 'Cancelled');
 
         expect($cancelledEntry['label'])->toBe('Cancelled');
@@ -126,7 +128,7 @@ class EnumExportTest extends TestCase
 
     public function test_meta_resolution_with_attributes(): void
     {
-        $result = TripStatus::forFrontend();
+        $result = $this->extractor->extract(TripStatus::class);
         $savedEntry = collect($result['entries'])->firstWhere('key', 'Saved');
 
         expect($savedEntry['meta'])->toBe(['color' => 'gray', 'icon' => 'save']);
@@ -134,10 +136,10 @@ class EnumExportTest extends TestCase
 
     public function test_meta_resolution_fallback_to_empty_array(): void
     {
-        $result = TripStatus::forFrontend();
+        $result = $this->extractor->extract(TripStatus::class);
         $cancelledEntry = collect($result['entries'])->firstWhere('key', 'Cancelled');
 
-        expect($cancelledEntry['meta'])->toBe([]);
+        expect($cancelledEntry['meta'])->toEqual((object) []);
     }
 
     public function test_enum_registry_manifest_generation(): void
@@ -175,7 +177,7 @@ class EnumExportTest extends TestCase
 
         config(['enumshare.locales' => ['en', 'fr', 'es']]);
 
-        $result = OrderStatus::forFrontend();
+        $result = $this->extractor->extract(OrderStatus::class);
         $pendingEntry = collect($result['entries'])->firstWhere('key', 'Pending');
 
         expect($pendingEntry['label'])
@@ -204,7 +206,7 @@ class EnumExportTest extends TestCase
 
         config(['enumshare.locales' => ['en']]);
 
-        $result = OrderStatus::forFrontend();
+        $result = $this->extractor->extract(OrderStatus::class);
         $confirmedEntry = collect($result['entries'])->firstWhere('key', 'Confirmed');
 
         expect($confirmedEntry['label'])
@@ -229,7 +231,7 @@ class EnumExportTest extends TestCase
         config(['app.locale' => 'en']);
         config(['enumshare.locales' => []]);
 
-        $result = OrderStatus::forFrontend();
+        $result = $this->extractor->extract(OrderStatus::class);
         $pendingEntry = collect($result['entries'])->firstWhere('key', 'Pending');
 
         expect($pendingEntry['label'])->toBe('Pending Order');
@@ -251,7 +253,7 @@ class EnumExportTest extends TestCase
 
         config(['enumshare.locales' => ['en']]);
 
-        $result = OrderStatus::forFrontend();
+        $result = $this->extractor->extract(OrderStatus::class);
         $pendingEntry = collect($result['entries'])->firstWhere('key', 'Pending');
         $cancelledEntry = collect($result['entries'])->firstWhere('key', 'Cancelled');
 
@@ -278,7 +280,7 @@ class EnumExportTest extends TestCase
         config(['app.locale' => 'en']);
         config(['enumshare.locales' => ['en']]);
 
-        $result = OrderStatus::forFrontend();
+        $result = $this->extractor->extract(OrderStatus::class);
         $pendingOption = collect($result['options'])->firstWhere('value', 'pending');
 
         expect($pendingOption['label'])->toBe('Pending Order');

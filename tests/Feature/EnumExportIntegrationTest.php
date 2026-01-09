@@ -52,8 +52,8 @@ it('handles export command with invalid enum gracefully', function () {
     // Run export command - should succeed but with warnings
     $this->artisan('enums:export')
         ->assertExitCode(0)
-        ->expectsOutput('Validating enums...')
-        ->expectsOutput('Some configured enums have validation errors:');
+        ->expectsOutput('Some configured enums are invalid:')
+        ->expectsOutput('No enums found to export.');
 
     // No files should be created
     $files = File::files($this->testOutputDir);
@@ -108,9 +108,7 @@ it('validates enum configuration before export', function () {
 
     $result = $this->artisan('enums:export');
 
-    $result->expectsOutput('Validating enums...');
-    $result->expectsOutput('Some configured enums have validation errors:');
-    $result->expectsOutput('1/3 configured enums are valid');
+    $result->expectsOutput('Some configured enums are invalid:');
     $result->expectsOutputToContain('Exported 1 enum(s) to:'); // Should still export valid enums
     $result->assertExitCode(0);
 });
@@ -132,7 +130,6 @@ it('handles empty enum configuration gracefully', function () {
 
     $this->artisan('enums:export')
         ->assertExitCode(0)
-        ->expectsOutput('No enums configured and auto-discovery is disabled.')
         ->expectsOutput('No enums found to export.');
 });
 

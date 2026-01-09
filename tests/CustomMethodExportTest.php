@@ -3,12 +3,10 @@
 namespace Tests;
 
 use Olivermbs\Enumshare\Attributes\ExportMethod;
-use Olivermbs\Enumshare\Concerns\SharesWithFrontend;
+use Olivermbs\Enumshare\Support\EnumExtractor;
 
 enum TestContactType: int
 {
-    use SharesWithFrontend;
-
     case EMAIL = 1;
     case PHONE = 2;
     case SMS = 3;
@@ -41,7 +39,8 @@ enum TestContactType: int
 }
 
 it('exports custom method results as properties', function () {
-    $result = TestContactType::forFrontend();
+    $extractor = new EnumExtractor();
+    $result = $extractor->extract(TestContactType::class);
 
     expect($result)->toHaveKey('entries');
     expect($result['entries'])->toHaveCount(4);

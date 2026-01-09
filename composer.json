@@ -1,6 +1,6 @@
 {
     "name": "olivermbs/enumshare",
-    "description": "Export PHP Enums to TypeScript with labels, metadata, and type-safe frontend access",
+    "description": "A Laravel package to export PHP Enums to TypeScript with labels, metadata, and type-safe frontend access",
     "keywords": [
         "enum",
         "typescript",

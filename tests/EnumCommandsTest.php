@@ -29,31 +29,20 @@ class EnumCommandsTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_enums_discover_command_works(): void
+    public function test_enums_export_list_shows_enums(): void
     {
         $this->createTestEnumFile();
 
-        $this->artisan('enums:discover')
-            ->expectsOutput('Discovering enums...')
-            ->expectsOutputToContain('Found 1 enum(s):')
-            ->expectsOutputToContain('App\\Enums\\CommandTestEnum')
+        $this->artisan('enums:export --list')
+            ->expectsOutput('Enums to export:')
+            ->expectsOutputToContain('CommandTestEnum')
             ->assertSuccessful();
     }
 
-    public function test_enums_discover_command_fails_when_disabled(): void
+    public function test_enums_export_list_warns_when_empty(): void
     {
-        config(['enumshare.auto_discovery' => false]);
-
-        $this->artisan('enums:discover')
-            ->expectsOutput('Enum autodiscovery is not enabled. Enable it in config/enumshare.php')
-            ->assertFailed();
-    }
-
-    public function test_enums_discover_command_shows_warning_when_no_enums_found(): void
-    {
-        $this->artisan('enums:discover')
-            ->expectsOutput('Discovering enums...')
-            ->expectsOutput('No enums found that use the SharesWithFrontend trait.')
+        $this->artisan('enums:export --list')
+            ->expectsOutput('No enums found to export.')
             ->assertSuccessful();
     }
 
@@ -66,7 +55,6 @@ class EnumCommandsTest extends TestCase
         $this->artisan('enums:export', [
             '--path' => $tempDir,
         ])
-            ->expectsOutput('Generating enum manifest...')
             ->expectsOutputToContain('Exported 1 enum(s) to:')
             ->assertSuccessful();
 
@@ -93,11 +81,8 @@ class EnumCommandsTest extends TestCase
 
 namespace App\\Enums;
 
-use Olivermbs\\Enumshare\\Concerns\\SharesWithFrontend;
 enum CommandTestEnum: string
 {
-    use SharesWithFrontend;
-    
     case Active = 'active';
     case Inactive = 'inactive';
 }";

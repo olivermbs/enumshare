@@ -3,11 +3,9 @@
 namespace Olivermbs\Enumshare;
 
 use Illuminate\Support\ServiceProvider;
-use Olivermbs\Enumshare\Commands\EnumsDiscoverCommand;
-use Olivermbs\Enumshare\Commands\EnumsExportAllLocalesCommand;
 use Olivermbs\Enumshare\Commands\EnumsExportCommand;
-use Olivermbs\Enumshare\Commands\EnumsWatchCommand;
 use Olivermbs\Enumshare\Support\EnumAutoDiscovery;
+use Olivermbs\Enumshare\Support\EnumExporter;
 use Olivermbs\Enumshare\Support\EnumRegistry;
 use Olivermbs\Enumshare\Support\EnumValidator;
 use Olivermbs\Enumshare\Support\TypeScriptEnumGenerator;
@@ -45,12 +43,12 @@ class EnumshareServiceProvider extends ServiceProvider
                 $app->make(TypeScriptTypeResolver::class)
             );
         });
+
+        $this->app->singleton(EnumExporter::class);
     }
 
     public function boot(): void
     {
-        $this->loadViewsFrom(__DIR__.'/Resources/Views', 'enumshare');
-
         if ($this->app->runningInConsole()) {
             $this->publishes([
                 __DIR__.'/../config/enumshare.php' => config_path('enumshare.php'),
@@ -58,9 +56,6 @@ class EnumshareServiceProvider extends ServiceProvider
 
             $this->commands([
                 EnumsExportCommand::class,
-                EnumsExportAllLocalesCommand::class,
-                EnumsWatchCommand::class,
-                EnumsDiscoverCommand::class,
             ]);
         }
     }

@@ -1,1 +1,0 @@
-{!! $generator->generate($name, compact('fqcn', 'backingType', 'entries', 'options')) !!}

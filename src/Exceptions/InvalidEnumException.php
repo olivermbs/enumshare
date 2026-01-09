@@ -16,16 +16,17 @@ class InvalidEnumException extends Exception
         return new self("Class '{$enumClass}' is not an enum.");
     }
 
-    public static function missingTrait(string $enumClass): self
-    {
-        return new self(
-            "Enum '{$enumClass}' must use the SharesWithFrontend trait to be exported."
-        );
-    }
-
     public static function noCases(string $enumClass): self
     {
         return new self("Enum '{$enumClass}' has no cases to export.");
+    }
+
+    public static function duplicateShortName(string $shortName, string $firstClass, string $secondClass): self
+    {
+        return new self(
+            "Enum name collision: '{$shortName}' is used by both {$firstClass} and {$secondClass}. " .
+            "Use unique enum names or configure specific enums in config/enumshare.php."
+        );
     }
 
     public static function reflectionError(string $enumClass, string $error): self

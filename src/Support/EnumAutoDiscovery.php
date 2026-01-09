@@ -64,23 +64,67 @@ class EnumAutoDiscovery
     {
         $content = File::get($filePath);
         $enums = [];
+        $tokens = \PhpToken::tokenize($content);
+        $namespace = '';
 
-        // Extract namespace
-        preg_match('/namespace\s+([^;]+);/', $content, $namespaceMatches);
-        $namespace = $namespaceMatches[1] ?? '';
+        $count = count($tokens);
+        for ($i = 0; $i < $count; $i++) {
+            $token = $tokens[$i];
 
-        // Extract enum definitions - handle multiline declarations
-        preg_match_all('/enum\s+(\w+)(?:\s*:\s*\w+)?(?:\s+implements\s+[^{]+)?\s*\{/ims', $content, $enumMatches);
+            if ($token->id === T_NAMESPACE) {
+                $namespace = $this->parseNamespace($tokens, $i + 1);
+                continue;
+            }
 
-        foreach ($enumMatches[1] as $enumName) {
-            if ($namespace) {
-                $enums[] = $namespace.'\\'.$enumName;
-            } else {
-                $enums[] = $enumName;
+            if ($token->id === T_ENUM) {
+                $enumName = $this->parseEnumName($tokens, $i + 1);
+
+                if ($enumName) {
+                    $enums[] = $namespace ? $namespace.'\\'.$enumName : $enumName;
+                }
             }
         }
 
-        return $enums;
+        return array_values(array_unique($enums));
+    }
+
+    protected function parseNamespace(array $tokens, int $start): string
+    {
+        $parts = [];
+        $count = count($tokens);
+
+        for ($i = $start; $i < $count; $i++) {
+            $token = $tokens[$i];
+
+            if ($token->text === ';' || $token->text === '{') {
+                break;
+            }
+
+            if ($token->id === T_STRING || $token->id === T_NS_SEPARATOR || $token->id === T_NAME_QUALIFIED || $token->id === T_NAME_FULLY_QUALIFIED) {
+                $parts[] = $token->text;
+            }
+        }
+
+        return implode('', $parts);
+    }
+
+    protected function parseEnumName(array $tokens, int $start): ?string
+    {
+        $count = count($tokens);
+
+        for ($i = $start; $i < $count; $i++) {
+            $token = $tokens[$i];
+
+            if ($token->id === T_STRING) {
+                return $token->text;
+            }
+
+            if (! $token->isIgnorable()) {
+                break;
+            }
+        }
+
+        return null;
     }
 
     protected function isValidFrontendEnum(string $enumClass): bool

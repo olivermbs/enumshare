@@ -3,7 +3,7 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/olivermbs/enumshare.svg?style=flat-square)](https://packagist.org/packages/olivermbs/enumshare)
 [![Tests](https://img.shields.io/github/actions/workflow/status/olivermbs/enumshare/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/olivermbs/enumshare/actions?query=workflow%3Arun-tests+branch%3Amain)
 
-Export PHP Enums to TypeScript. Simple, type-safe, zero runtime dependencies.
+A Laravel package to export PHP Enums to TypeScript. Simple, type-safe, zero runtime dependencies.
 
 ## Installation
 
@@ -13,7 +13,7 @@ composer require olivermbs/enumshare
 
 ## Quick Start
 
-### 1. Add the trait to your enum
+### 1. Create your enum
 
 ```php
 <?php
@@ -22,12 +22,9 @@ namespace App\Enums;
 
 use Olivermbs\Enumshare\Attributes\Label;
 use Olivermbs\Enumshare\Attributes\Meta;
-use Olivermbs\Enumshare\Concerns\SharesWithFrontend;
 
 enum Status: string
 {
-    use SharesWithFrontend;
-
     #[Label('Active')]
     #[Meta(['color' => 'green'])]
     case Active = 'active';
@@ -37,6 +34,8 @@ enum Status: string
     case Inactive = 'inactive';
 }
 ```
+
+Any PHP enum can be exported - no trait required.
 
 ### 2. Export
 
@@ -58,31 +57,40 @@ Status.isValid('active') // true
 Status.options         // [{ value: 'active', label: 'Active' }, ...]
 ```
 
+### Generated Output
+
+![PHP Enum](docs/PHP_enum.png)
+
+**↓ Generates ↓**
+
+![Generated TypeScript](docs/generated-output.png)
+
 ## Output Modes
 
-### Default (Full)
+Configure the output mode in `config/enumshare.php`:
 
-Includes lookup maps, type guards, and utility methods:
-
-```bash
-php artisan enums:export
+```php
+'mode' => 'full',  // or 'minimal'
 ```
+
+### Full (default)
+
+Includes labels, meta, lookup maps, type guards, and utility methods.
 
 ### Minimal
 
-Wayfinder-style simple output (~15 lines per enum):
-
-```bash
-php artisan enums:export --minimal
-```
+Simple output - just values and types (~10 lines per enum):
 
 ```typescript
-export type Status = 'active' | 'inactive';
+/* eslint-disable */
+// Auto-generated from App\Enums\Status
 
-export const Active: Status = 'active';
-export const Inactive: Status = 'inactive';
+export const Status = {
+  Active: 'active',
+  Inactive: 'inactive',
+} as const;
 
-export const Status = { Active, Inactive } as const;
+export type Status = typeof Status[keyof typeof Status];
 ```
 
 ## Configuration
@@ -98,6 +106,7 @@ return [
         App\Enums\Status::class,
     ],
     'path' => resource_path('js/Enums'),
+    'mode' => 'full',  // 'full' or 'minimal'
     'auto_discovery' => true,
     'auto_paths' => ['app/Enums'],
 ];
@@ -107,11 +116,10 @@ return [
 
 ```bash
 php artisan enums:export              # Export enums
-php artisan enums:export --minimal    # Simple output
 php artisan enums:export --types      # Export type definitions
 php artisan enums:export --force      # Overwrite existing
-php artisan enums:discover            # List discovered enums
-php artisan enums:watch               # Watch for changes
+php artisan enums:export --index      # Generate barrel index file
+php artisan enums:export --list       # List enums that would be exported
 ```
 
 ## Attributes
@@ -122,6 +130,8 @@ php artisan enums:watch               # Watch for changes
 | `#[TranslatedLabel('key')]` | Translation key |
 | `#[Meta(['key' => 'value'])]` | Metadata |
 | `#[ExportMethod]` | Export method result |
+
+**Note:** Enums are keyed by short name (class basename). Duplicate names across namespaces will cause a collision error.
 
 ## Auto-Regeneration with Vite
 
@@ -148,7 +158,7 @@ export default defineConfig({
 });
 ```
 
-> **Note:** Wayfinder is optional - only needed for auto-regeneration. You can always run `php artisan enums:export` manually or use `php artisan enums:watch`.
+> **Note:** Wayfinder is optional - only needed for auto-regeneration. You can always run `php artisan enums:export` manually.
 
 ## Testing
 

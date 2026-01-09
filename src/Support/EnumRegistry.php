@@ -2,6 +2,7 @@
 
 namespace Olivermbs\Enumshare\Support;
 
+use Olivermbs\Enumshare\Exceptions\InvalidEnumException;
 use ReflectionClass;
 
 class EnumRegistry
@@ -9,15 +10,17 @@ class EnumRegistry
     public function __construct(
         protected array $enums = [],
         protected ?EnumAutoDiscovery $autoDiscovery = null,
-        protected ?EnumValidator $validator = null
+        protected ?EnumValidator $validator = null,
+        protected ?EnumExtractor $extractor = null
     ) {}
 
     public function manifest(?string $locale = null): array
     {
         $manifest = [];
-        $allEnums = $this->getAllEnums();
+        $seen = [];
+        $extractor = $this->extractor ?? new EnumExtractor();
 
-        foreach ($allEnums as $enumClass) {
+        foreach ($this->getAllEnums() as $enumClass) {
             if (! $this->isValidEnum($enumClass)) {
                 continue;
             }
@@ -25,7 +28,13 @@ class EnumRegistry
             $reflection = new ReflectionClass($enumClass);
             $shortName = $reflection->getShortName();
 
-            $manifest[$shortName] = $enumClass::forFrontend($locale);
+            // Detect duplicate short names
+            if (isset($seen[$shortName])) {
+                throw InvalidEnumException::duplicateShortName($shortName, $seen[$shortName], $enumClass);
+            }
+
+            $seen[$shortName] = $enumClass;
+            $manifest[$shortName] = $extractor->extract($enumClass, $locale);
         }
 
         ksort($manifest);
@@ -41,7 +50,7 @@ class EnumRegistry
         );
 
         $discoveredEnums = [];
-        if ($this->autoDiscovery && $this->isAutoDiscoveryEnabled()) {
+        if ($this->autoDiscovery && config('enumshare.auto_discovery', false)) {
             $discoveredEnums = $this->autoDiscovery->discover();
         }
 
@@ -51,23 +60,12 @@ class EnumRegistry
         return $allEnums;
     }
 
-    protected function isAutoDiscoveryEnabled(): bool
-    {
-        return config('enumshare.auto_discovery', false);
-    }
-
     protected function isValidEnum(string $enumClass): bool
     {
         if ($this->validator) {
             return $this->validator->isValidEnumForExport($enumClass);
         }
 
-        if (! class_exists($enumClass)) {
-            return false;
-        }
-
-        $reflection = new ReflectionClass($enumClass);
-
-        return $reflection->isEnum();
+        return class_exists($enumClass) && (new ReflectionClass($enumClass))->isEnum();
     }
 }

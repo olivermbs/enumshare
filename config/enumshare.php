@@ -7,7 +7,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | List of enum class FQCNs that should be exported to the frontend.
-    | Each enum must use the SharesWithFrontend trait.
+    | Any PHP enum can be exported - no trait required.
+    | All enums are extracted via reflection.
     |
     */
     'enums' => [
@@ -24,6 +25,17 @@ return [
     |
     */
     'path' => resource_path('js/Enums'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Output Mode
+    |--------------------------------------------------------------------------
+    |
+    | 'full' - Includes labels, meta, helpers (from, isValid, options, etc.)
+    | 'minimal' - Just values and types (~10 lines per enum)
+    |
+    */
+    'mode' => 'full',
 
     /*
     |--------------------------------------------------------------------------
@@ -47,8 +59,13 @@ return [
     | Auto-Discovery
     |--------------------------------------------------------------------------
     |
-    | Automatically discover enums in specified paths.
-    | Scans for enums that use the SharesWithFrontend trait.
+    | Automatically discover all PHP enums in specified paths.
+    |
+    | Note: This will export ALL enums found in the configured paths.
+    | For tighter control, disable auto-discovery and list enums explicitly
+    | in the 'enums' array above.
+    | Note: Enums are keyed by short name; duplicate basenames across
+    | namespaces will cause a name collision error.
     |
     */
     'auto_discovery' => env('ENUMSHARE_AUTODISCOVERY', true),

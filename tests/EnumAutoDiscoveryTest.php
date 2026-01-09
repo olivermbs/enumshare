@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
-use Olivermbs\Enumshare\Concerns\SharesWithFrontend;
 use Olivermbs\Enumshare\Support\EnumAutoDiscovery;
 use Olivermbs\Enumshare\Support\EnumRegistry;
 use Olivermbs\Enumshare\Tests\TestCase;
@@ -81,19 +80,20 @@ class EnumAutoDiscoveryTest extends TestCase
             ->and($secondCall)->toContain('App\\Enums\\AnotherFreshEnum');
     }
 
-    public function test_skips_invalid_enums(): void
+    public function test_skips_non_enum_classes(): void
     {
-        // Create a class that's not an enum
+        // Create a class that's not an enum - should be skipped
         $this->createTestClassFile('NotAnEnum', 'App\\Enums');
-        // Create an enum that doesn't use SharesWithFrontend
-        $this->createInvalidEnumFile('InvalidEnum', 'App\\Enums');
+        // Create an enum - should be discovered
+        $this->createTestEnumFile('PlainEnum', 'App\\Enums');
 
         $discovery = new EnumAutoDiscovery(['test_enums']);
         $discoveredEnums = $discovery->discover();
 
-        expect($discoveredEnums)
-            ->not->toContain('App\\Enums\\NotAnEnum')
-            ->not->toContain('App\\Enums\\InvalidEnum');
+        // Non-enum classes should be skipped
+        expect($discoveredEnums)->not->toContain('App\\Enums\\NotAnEnum');
+        // Plain enums should be discovered
+        expect($discoveredEnums)->toContain('App\\Enums\\PlainEnum');
     }
 
     public function test_enum_registry_integrates_with_autodiscovery(): void
@@ -145,11 +145,9 @@ class EnumAutoDiscoveryTest extends TestCase
 namespace {$namespace};
 
 use Olivermbs\\Enumshare\\Attributes\\Label;
-use Olivermbs\\Enumshare\\Concerns\\SharesWithFrontend;
+
 enum {$enumName}: string
 {
-    use SharesWithFrontend;
-    
     #[Label('Test Case')]
     case TestCase = 'test';
 }";
@@ -174,21 +172,6 @@ class {$className}
         File::put($this->testEnumsPath.'/'.$className.'.php', $content);
     }
 
-    protected function createInvalidEnumFile(string $enumName, string $namespace): void
-    {
-        $content = "<?php
-
-namespace {$namespace};
-
-enum {$enumName}: string
-{
-    case Test = 'test';
-    // Doesn't use SharesWithFrontend
-}";
-
-        File::put($this->testEnumsPath.'/'.$enumName.'.php', $content);
-    }
-
     public function getEnvironmentSetUp($app): void
     {
         parent::getEnvironmentSetUp($app);
@@ -209,7 +192,5 @@ enum {$enumName}: string
 // Test enum for configured enums testing
 enum TestConfiguredEnum: string
 {
-    use SharesWithFrontend;
-
     case Configured = 'configured';
 }

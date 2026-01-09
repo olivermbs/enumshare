@@ -31,16 +31,18 @@ it('rejects non-enum classes', function () {
         ->toThrow(InvalidEnumException::class, 'is not an enum');
 });
 
-it('rejects enums without SharesWithFrontend trait', function () {
-    // Create a test enum without the trait for testing
-    if (! enum_exists('TestEnumWithoutTrait')) {
-        eval('enum TestEnumWithoutTrait: string { case Test = "test"; }');
+it('validates any PHP enum', function () {
+    // Create a plain enum
+    if (! enum_exists('TestPlainEnum')) {
+        eval('enum TestPlainEnum: string { case Test = "test"; }');
     }
 
-    expect($this->validator->isValidEnumForExport('TestEnumWithoutTrait'))->toBeFalse();
+    // Any PHP enum can be exported
+    expect($this->validator->isValidEnumForExport('TestPlainEnum'))->toBeTrue();
 
-    expect(fn () => $this->validator->validateEnumForExport('TestEnumWithoutTrait'))
-        ->toThrow(InvalidEnumException::class, 'must use the SharesWithFrontend trait');
+    // Should not throw exception
+    expect(fn () => $this->validator->validateEnumForExport('TestPlainEnum'))
+        ->not->toThrow(\Exception::class);
 });
 
 it('validates multiple enums and returns results', function () {
