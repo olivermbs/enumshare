@@ -88,15 +88,11 @@ class EnumExtractor
         return $case->name;
     }
 
-    protected function resolveMeta(ReflectionClassConstant $reflection): array|object
+    protected function resolveMeta(ReflectionClassConstant $reflection): array
     {
         $attrs = $reflection->getAttributes(Meta::class);
 
-        if ($attrs) {
-            return $attrs[0]->newInstance()->data;
-        }
-
-        return (object) [];
+        return $attrs ? $attrs[0]->newInstance()->data : [];
     }
 
     protected function resolveCustomMethods($case, ReflectionEnum $reflection): array

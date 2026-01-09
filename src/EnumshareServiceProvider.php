@@ -9,7 +9,6 @@ use Olivermbs\Enumshare\Support\EnumExporter;
 use Olivermbs\Enumshare\Support\EnumRegistry;
 use Olivermbs\Enumshare\Support\EnumValidator;
 use Olivermbs\Enumshare\Support\TypeScriptEnumGenerator;
-use Olivermbs\Enumshare\Support\TypeScriptTypeResolver;
 
 class EnumshareServiceProvider extends ServiceProvider
 {
@@ -36,12 +35,8 @@ class EnumshareServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->singleton(TypeScriptTypeResolver::class);
-
         $this->app->singleton(TypeScriptEnumGenerator::class, function ($app) {
-            return new TypeScriptEnumGenerator(
-                $app->make(TypeScriptTypeResolver::class)
-            );
+            return new TypeScriptEnumGenerator();
         });
 
         $this->app->singleton(EnumExporter::class);

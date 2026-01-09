@@ -52,7 +52,7 @@ it('handles export command with invalid enum gracefully', function () {
     // Run export command - should succeed but with warnings
     $this->artisan('enums:export')
         ->assertExitCode(0)
-        ->expectsOutput('Some configured enums are invalid:')
+        ->expectsOutputToContain('Invalid enum NonExistentEnum:')
         ->expectsOutput('No enums found to export.');
 
     // No files should be created
@@ -108,7 +108,7 @@ it('validates enum configuration before export', function () {
 
     $result = $this->artisan('enums:export');
 
-    $result->expectsOutput('Some configured enums are invalid:');
+    $result->expectsOutputToContain('Invalid enum NonExistentEnum:');
     $result->expectsOutputToContain('Exported 1 enum(s) to:'); // Should still export valid enums
     $result->assertExitCode(0);
 });

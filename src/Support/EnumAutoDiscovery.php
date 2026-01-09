@@ -17,11 +17,6 @@ class EnumAutoDiscovery
         return $this->performDiscovery();
     }
 
-    public function clearCache(): void
-    {
-        // No cache to clear - discovery is always fresh
-    }
-
     protected function performDiscovery(): array
     {
         $enums = [];

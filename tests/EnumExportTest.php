@@ -139,7 +139,7 @@ class EnumExportTest extends TestCase
         $result = $this->extractor->extract(TripStatus::class);
         $cancelledEntry = collect($result['entries'])->firstWhere('key', 'Cancelled');
 
-        expect($cancelledEntry['meta'])->toEqual((object) []);
+        expect($cancelledEntry['meta'])->toBe([]);
     }
 
     public function test_enum_registry_manifest_generation(): void

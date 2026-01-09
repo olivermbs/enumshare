@@ -1,11 +1,9 @@
 <?php
 
 use Olivermbs\Enumshare\Support\TypeScriptEnumGenerator;
-use Olivermbs\Enumshare\Support\TypeScriptTypeResolver;
 
 beforeEach(function () {
-    $this->typeResolver = new TypeScriptTypeResolver;
-    $this->generator = new TypeScriptEnumGenerator($this->typeResolver);
+    $this->generator = new TypeScriptEnumGenerator;
 });
 
 it('generates TypeScript for simple string enum', function () {

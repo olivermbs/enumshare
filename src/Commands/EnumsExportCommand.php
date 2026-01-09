@@ -13,7 +13,7 @@ class EnumsExportCommand extends Command
                             {--locale= : Override the locale for label generation}
                             {--index : Generate barrel index file}
                             {--types : Export TypeScript helper types}
-                            {--force : Force overwrite existing files}
+                            {--force : Rewrite all files, even if unchanged}
                             {--list : List enums that would be exported}';
 
     protected $description = 'Export enums to TypeScript files';
@@ -30,11 +30,14 @@ class EnumsExportCommand extends Command
                 'list' => $this->option('list'),
             ]);
 
-            if (! empty($result['warnings'])) {
-                $this->warn('Some configured enums are invalid:');
-                foreach ($result['warnings'] as $enumClass => $error) {
-                    $this->warn("- {$enumClass}: {$error}");
-                }
+            $warnings = $result['warnings'] ?? [];
+
+            foreach ($warnings['config'] ?? [] as $warning) {
+                $this->warn($warning);
+            }
+
+            foreach ($warnings['enums'] ?? [] as $enumClass => $error) {
+                $this->warn("Invalid enum {$enumClass}: {$error}");
             }
 
             if (($result['mode'] ?? null) === 'list') {

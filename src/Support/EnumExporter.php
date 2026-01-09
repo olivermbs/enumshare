@@ -62,14 +62,23 @@ class EnumExporter
     protected function validateConfiguration(): array
     {
         $configuredEnums = config('enumshare.enums', []);
+        $autoDiscovery = config('enumshare.auto_discovery', false);
 
-        if (empty($configuredEnums)) {
-            return [];
+        $configWarnings = [];
+        if (empty($configuredEnums) && ! $autoDiscovery) {
+            $configWarnings[] = 'No enums configured and auto-discovery is disabled.';
         }
 
-        $validation = $this->validator->validateMultipleEnumsForExport($configuredEnums);
+        $enumErrors = [];
+        if (! empty($configuredEnums)) {
+            $validation = $this->validator->validateMultipleEnumsForExport($configuredEnums);
+            $enumErrors = $validation['errors'] ?? [];
+        }
 
-        return $validation['errors'] ?? [];
+        return [
+            'config' => $configWarnings,
+            'enums' => $enumErrors,
+        ];
     }
 
     protected function ensureDirectoryExists(string $directory): void
@@ -110,14 +119,10 @@ class EnumExporter
 
     protected function writeFileIfChanged(string $filePath, string $content, bool $force): bool
     {
-        if (File::exists($filePath)) {
+        if (File::exists($filePath) && ! $force) {
             $existingContent = File::get($filePath);
 
             if (hash('xxh3', $existingContent) === hash('xxh3', $content)) {
-                return false;
-            }
-
-            if (! $force) {
                 return false;
             }
         }

@@ -4,9 +4,6 @@ namespace Olivermbs\Enumshare\Support;
 
 class TypeScriptEnumGenerator
 {
-    public function __construct(
-        protected TypeScriptTypeResolver $typeResolver
-    ) {}
 
     public function generate(string $enumName, array $enumData, bool $exportTypes = false, string $mode = 'full'): string
     {
@@ -46,8 +43,8 @@ class TypeScriptEnumGenerator
 
     protected function generateFull(string $enumName, string $fqcn, ?string $backingType, array $entries, bool $exportTypes): string
     {
-        $labelAnalysis = $this->typeResolver->analyzeLabelTypes($entries);
-        $metaTypes = $this->typeResolver->analyzeMetaTypes($entries);
+        $labelAnalysis = $this->analyzeLabelTypes($entries);
+        $metaTypes = $this->analyzeMetaTypes($entries);
         $export = $exportTypes ? 'export ' : '';
         $isMultilingual = $labelAnalysis['isMultilingual'];
 
@@ -242,6 +239,78 @@ class TypeScriptEnumGenerator
         return implode("\n", $lines);
     }
 
+    protected function analyzeLabelTypes(array $entries): array
+    {
+        $labelTypes = [];
+
+        foreach ($entries as $entry) {
+            $labelTypes[] = is_array($entry['label']) ? 'Record<string, string>' : 'string';
+        }
+
+        $labelTypes = array_unique($labelTypes);
+
+        return [
+            'unionType' => implode(' | ', $labelTypes),
+            'isMultilingual' => in_array('Record<string, string>', $labelTypes, true),
+        ];
+    }
+
+    protected function analyzeMetaTypes(array $entries): array
+    {
+        $metaTypes = [];
+
+        foreach ($entries as $entry) {
+            if (! isset($entry['meta']) || ! is_array($entry['meta'])) {
+                continue;
+            }
+
+            foreach ($entry['meta'] as $metaKey => $metaValue) {
+                $tsType = $this->phpToTypeScriptType($metaValue);
+                $metaTypes[$metaKey][] = $tsType;
+            }
+        }
+
+        foreach ($metaTypes as $key => $types) {
+            $metaTypes[$key] = array_values(array_unique($types));
+        }
+
+        return $metaTypes;
+    }
+
+    protected function phpToTypeScriptType(mixed $value): string
+    {
+        if (is_null($value)) {
+            return 'null';
+        }
+
+        if (is_bool($value)) {
+            return 'boolean';
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return 'number';
+        }
+
+        if (is_string($value)) {
+            return 'string';
+        }
+
+        if (is_array($value)) {
+            if (empty($value)) {
+                return 'Record<string, unknown>';
+            }
+
+            if (array_keys($value) === range(0, count($value) - 1)) {
+                $firstType = $this->phpToTypeScriptType($value[0]);
+
+                return $firstType.'[]';
+            }
+
+            return 'Record<string, any>';
+        }
+
+        return 'unknown';
+    }
     protected function buildUtilityMethods(string $enumName, ?string $backingType, bool $isMultilingual): string
     {
         $lines = [];

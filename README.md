@@ -117,7 +117,7 @@ return [
 ```bash
 php artisan enums:export              # Export enums
 php artisan enums:export --types      # Export type definitions
-php artisan enums:export --force      # Overwrite existing
+php artisan enums:export --force      # Rewrite all, even if unchanged
 php artisan enums:export --index      # Generate barrel index file
 php artisan enums:export --list       # List enums that would be exported
 ```
