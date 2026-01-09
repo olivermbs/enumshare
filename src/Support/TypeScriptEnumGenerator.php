@@ -269,7 +269,7 @@ class TypeScriptEnumGenerator
         $entryType = 'typeof ENTRIES[number]';
 
         $fromMethod = $backingType
-            ? "from(value: {$valueType} | null | undefined): {$entryType} | null { return value == null ? null : BY_VALUE.get(value) ?? null; },"
+            ? "from(value: {$valueType} | null | undefined): {$entryType} | null { return value == null ? null : BY_VALUE.get(value as {$enumName}Value) ?? null; },"
             : "from(value: string | null | undefined): {$entryType} | null { return value == null ? null : BY_KEY.get(value as {$enumName}Key) ?? null; },";
 
         $isValidMethod = $backingType
