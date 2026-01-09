@@ -46,7 +46,7 @@ php artisan enums:export
 ### 3. Use in TypeScript
 
 ```typescript
-import { Status } from '@/enums/Status';
+import { Status } from '@/Enums/Status';
 
 Status.Active.value    // 'active'
 Status.Active.label    // 'Active'
@@ -116,10 +116,12 @@ return [
 
 ```bash
 php artisan enums:export              # Export enums
-php artisan enums:export --types      # Export type definitions
 php artisan enums:export --force      # Rewrite all, even if unchanged
-php artisan enums:export --index      # Generate barrel index file
 php artisan enums:export --list       # List enums that would be exported
+php artisan enums:export --index      # Generate barrel index file
+php artisan enums:export --types      # Export TypeScript helper types
+php artisan enums:export --path=...   # Override export path
+php artisan enums:export --locale=... # Override locale for labels
 ```
 
 ## Attributes
