@@ -82,7 +82,7 @@ it('exports enums with custom methods correctly', function () {
 
     // Should contain basic structure
     expect($content)->toContain('export const TestEnum');
-    expect($content)->toContain("key: 'Active'");
+    expect($content)->toContain('key: "Active"');
     expect($content)->toContain('from(value:');
 });
 

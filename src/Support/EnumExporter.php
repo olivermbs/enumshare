@@ -3,7 +3,9 @@
 namespace Olivermbs\Enumshare\Support;
 
 use Illuminate\Support\Facades\File;
+use Olivermbs\Enumshare\Attributes\DontExport;
 use Olivermbs\Enumshare\Exceptions\ExportException;
+use ReflectionClass;
 
 class EnumExporter
 {
@@ -66,6 +68,12 @@ class EnumExporter
         $configWarnings = [];
         if (empty($configuredEnums) && ! $autoDiscovery) {
             $configWarnings[] = 'No enums configured and auto-discovery is disabled.';
+        }
+
+        foreach ($configuredEnums as $enumClass) {
+            if (class_exists($enumClass) && (new ReflectionClass($enumClass))->getAttributes(DontExport::class) !== []) {
+                $configWarnings[] = "Enum {$enumClass} is listed in config but marked #[DontExport]; skipping.";
+            }
         }
 
         $enumErrors = ! empty($configuredEnums)

@@ -12,6 +12,8 @@ use ReflectionMethod;
 
 class EnumExtractor
 {
+    protected const array RESERVED_ENTRY_KEYS = ['key', 'value', 'label', 'meta'];
+
     public function extract(string $enumClass, ?string $locale = null): array
     {
         $reflection = new ReflectionEnum($enumClass);
@@ -98,7 +100,21 @@ class EnumExtractor
 
             try {
                 $exportMethod = $attr->newInstance();
-                $methods[$exportMethod->name ?? $method->getName()] = $case->{$method->getName()}();
+                $exportName = $exportMethod->name ?? $method->getName();
+
+                if (in_array($exportName, self::RESERVED_ENTRY_KEYS, true)) {
+                    if (function_exists('logger')) {
+                        logger()->warning('Enumshare export method uses a reserved entry key', [
+                            'enum' => $case::class,
+                            'method' => $method->getName(),
+                            'key' => $exportName,
+                        ]);
+                    }
+
+                    continue;
+                }
+
+                $methods[$exportName] = $case->{$method->getName()}();
             } catch (\Throwable) {
                 if (function_exists('logger')) {
                     logger()->warning('Enumshare export method failed', [

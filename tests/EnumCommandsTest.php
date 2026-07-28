@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\File;
+use Olivermbs\Enumshare\Support\EnumExporter;
 use Olivermbs\Enumshare\Tests\TestCase;
 
 class EnumCommandsTest extends TestCase
@@ -70,6 +71,31 @@ class EnumCommandsTest extends TestCase
 
         // Clean up
         File::deleteDirectory($tempDir);
+    }
+
+    public function test_enums_export_reports_files_skipped_because_content_is_unchanged(): void
+    {
+        $this->createTestEnumFile();
+        $tempDir = sys_get_temp_dir().'/enumshare-export-test-'.uniqid();
+
+        $this->artisan('enums:export', ['--path' => $tempDir])->assertSuccessful();
+
+        $this->artisan('enums:export', ['--path' => $tempDir])
+            ->expectsOutput('Skipped 1 enum(s) (content unchanged).')
+            ->assertSuccessful();
+
+        File::deleteDirectory($tempDir);
+    }
+
+    public function test_enums_export_catches_throwables(): void
+    {
+        $exporter = Mockery::mock(EnumExporter::class);
+        $exporter->shouldReceive('export')->once()->andThrow(new Error('Unexpected failure'));
+        $this->app->instance(EnumExporter::class, $exporter);
+
+        $this->artisan('enums:export')
+            ->expectsOutput('Export failed: Unexpected failure')
+            ->assertFailed();
     }
 
     protected function createTestEnumFile(): void

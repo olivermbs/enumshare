@@ -4,6 +4,7 @@ namespace Olivermbs\Enumshare\Support;
 
 use Illuminate\Support\Facades\File;
 use ReflectionClass;
+use Symfony\Component\Finder\Exception\DirectoryNotFoundException;
 use Symfony\Component\Finder\Finder;
 
 class EnumAutoDiscovery
@@ -25,17 +26,18 @@ class EnumAutoDiscovery
 
     protected function scanPath(string $path): array
     {
-        $fullPath = base_path($path);
+        $fullPath = $this->isAbsolutePath($path) ? $path : base_path($path);
 
-        if (! File::isDirectory($fullPath)) {
+        try {
+            $finder = Finder::create()
+                ->files()
+                ->name('*.php')
+                ->in($fullPath);
+        } catch (DirectoryNotFoundException) {
             return [];
         }
 
         $enums = [];
-        $finder = Finder::create()
-            ->files()
-            ->name('*.php')
-            ->in($fullPath);
 
         foreach ($finder as $file) {
             $enumClasses = $this->extractEnumClassesFromFile($file->getRealPath());
@@ -48,6 +50,13 @@ class EnumAutoDiscovery
         }
 
         return $enums;
+    }
+
+    protected function isAbsolutePath(string $path): bool
+    {
+        return str_starts_with($path, '/')
+            || str_starts_with($path, '\\\\')
+            || preg_match('/^[A-Za-z]:[\/\\\\]/', $path) === 1;
     }
 
     protected function extractEnumClassesFromFile(string $filePath): array

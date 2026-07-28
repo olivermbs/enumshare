@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Olivermbs\Enumshare\Commands\EnumsExportCommand;
 use Olivermbs\Enumshare\Support\EnumAutoDiscovery;
 use Olivermbs\Enumshare\Support\EnumExporter;
+use Olivermbs\Enumshare\Support\EnumExtractor;
 use Olivermbs\Enumshare\Support\EnumRegistry;
 use Olivermbs\Enumshare\Support\TypeScriptEnumGenerator;
 
@@ -19,9 +20,12 @@ class EnumshareServiceProvider extends ServiceProvider
             config('enumshare.auto_paths', [])
         ));
 
+        $this->app->singleton(EnumExtractor::class);
+
         $this->app->singleton(EnumRegistry::class, fn ($app) => new EnumRegistry(
             config('enumshare.enums', []),
-            $app->make(EnumAutoDiscovery::class)
+            $app->make(EnumAutoDiscovery::class),
+            $app->make(EnumExtractor::class)
         ));
 
         $this->app->singleton(TypeScriptEnumGenerator::class);

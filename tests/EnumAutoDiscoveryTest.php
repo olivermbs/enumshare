@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Olivermbs\Enumshare\Support\EnumAutoDiscovery;
+use Olivermbs\Enumshare\Support\EnumExtractor;
 use Olivermbs\Enumshare\Support\EnumRegistry;
 use Olivermbs\Enumshare\Tests\TestCase;
 
@@ -101,7 +102,7 @@ class EnumAutoDiscoveryTest extends TestCase
         $this->createTestEnumFile('RegistryTestEnum', 'App\\Enums');
 
         $discovery = new EnumAutoDiscovery(['test_enums']);
-        $registry = new EnumRegistry([], $discovery);
+        $registry = new EnumRegistry([], $discovery, new EnumExtractor);
 
         // Enable autodiscovery in config
         config(['enumshare.auto_discovery' => true]);
@@ -120,7 +121,7 @@ class EnumAutoDiscoveryTest extends TestCase
         $configuredEnums = [TestConfiguredEnum::class];
 
         $discovery = new EnumAutoDiscovery(['test_enums']);
-        $registry = new EnumRegistry($configuredEnums, $discovery);
+        $registry = new EnumRegistry($configuredEnums, $discovery, new EnumExtractor);
 
         config(['enumshare.auto_discovery' => true]);
 
@@ -131,10 +132,36 @@ class EnumAutoDiscoveryTest extends TestCase
             ->toHaveKey('TestConfiguredEnum');
     }
 
-    protected function createTestEnumFile(string $enumName, string $namespace): void
+    public function test_discovers_enums_from_glob_paths(): void
     {
-        $namespacePath = str_replace('\\', '/', $namespace);
-        $directory = $this->testEnumsPath.'/'.dirname($namespacePath);
+        $this->createTestEnumFile('GlobDiscoveredEnum', 'App\\Domain\\Sales\\Enums', 'src/Domain/Sales/Enums');
+
+        $discovery = new EnumAutoDiscovery(['test_enums/src/Domain/*/Enums']);
+
+        expect($discovery->discover())->toContain('App\\Domain\\Sales\\Enums\\GlobDiscoveredEnum');
+    }
+
+    public function test_discovers_enums_from_absolute_paths(): void
+    {
+        $this->createTestEnumFile('AbsolutePathEnum', 'App\\AbsoluteEnums');
+
+        $discovery = new EnumAutoDiscovery([$this->testEnumsPath]);
+
+        expect($discovery->discover())->toContain('App\\AbsoluteEnums\\AbsolutePathEnum');
+    }
+
+    public function test_returns_no_enums_for_an_unmatched_glob(): void
+    {
+        $discovery = new EnumAutoDiscovery(['test_enums/missing/*/Enums']);
+
+        expect($discovery->discover())->toBe([]);
+    }
+
+    protected function createTestEnumFile(string $enumName, string $namespace, string $relativeDirectory = ''): void
+    {
+        $directory = $relativeDirectory === ''
+            ? $this->testEnumsPath
+            : $this->testEnumsPath.'/'.$relativeDirectory;
 
         if (! File::isDirectory($directory)) {
             File::makeDirectory($directory, 0755, true);
@@ -152,10 +179,11 @@ enum {$enumName}: string
     case TestCase = 'test';
 }";
 
-        File::put($this->testEnumsPath.'/'.$enumName.'.php', $content);
+        $file = $directory.'/'.$enumName.'.php';
+        File::put($file, $content);
 
         // Include the file so the class exists for testing
-        require_once $this->testEnumsPath.'/'.$enumName.'.php';
+        require_once $file;
     }
 
     protected function createTestClassFile(string $className, string $namespace): void

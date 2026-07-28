@@ -27,6 +27,41 @@ enum UserRole
     case Guest;
 }
 
+enum GeneratedPropertyCollision
+{
+    case entries;
+}
+
+enum GeneratedConstantCollision
+{
+    case ENTRIES;
+}
+
+enum TypeScriptReservedWordCollision
+{
+    case delete;
+}
+
+enum TypeScriptArgumentsCollision
+{
+    case arguments;
+}
+
+enum TypeScriptEvalCollision
+{
+    case eval;
+}
+
+enum delete
+{
+    case Active;
+}
+
+enum ENTRIES
+{
+    case Active;
+}
+
 enum OrderStatus: string
 {
     #[TranslatedLabel('orders.pending')]
@@ -131,10 +166,65 @@ class EnumExportTest extends TestCase
 
     public function test_enum_registry_filters_invalid_classes(): void
     {
-        $registry = new EnumRegistry([TripStatus::class, 'NonExistentClass', stdClass::class]);
+        $registry = new EnumRegistry([TripStatus::class, 'NonExistentClass', stdClass::class], null, $this->extractor);
         $manifest = $registry->manifest();
 
         expect($manifest)->toHaveKeys(['TripStatus']);
+    }
+
+    public function test_enum_registry_rejects_case_names_that_collide_with_generated_identifiers(): void
+    {
+        $registry = new EnumRegistry;
+
+        $errors = $registry->validateEnums([
+            GeneratedPropertyCollision::class,
+            GeneratedConstantCollision::class,
+        ]);
+
+        expect($errors[GeneratedPropertyCollision::class])
+            ->toContain("Enum '".GeneratedPropertyCollision::class."' case 'entries'")
+            ->toContain('conflicts with a generated TypeScript identifier')
+            ->and($errors[GeneratedConstantCollision::class])
+            ->toContain("Enum '".GeneratedConstantCollision::class."' case 'ENTRIES'")
+            ->toContain('conflicts with a generated TypeScript identifier');
+    }
+
+    public function test_enum_registry_rejects_typescript_reserved_case_names(): void
+    {
+        $registry = new EnumRegistry;
+
+        $errors = $registry->validateEnums([
+            TypeScriptReservedWordCollision::class,
+            TypeScriptArgumentsCollision::class,
+            TypeScriptEvalCollision::class,
+        ]);
+
+        expect($errors[TypeScriptReservedWordCollision::class])
+            ->toContain("Enum '".TypeScriptReservedWordCollision::class."' case 'delete'")
+            ->toContain('is a reserved JavaScript/TypeScript word')
+            ->and($errors[TypeScriptArgumentsCollision::class])
+            ->toContain("Enum '".TypeScriptArgumentsCollision::class."' case 'arguments'")
+            ->toContain('is a reserved JavaScript/TypeScript word')
+            ->and($errors[TypeScriptEvalCollision::class])
+            ->toContain("Enum '".TypeScriptEvalCollision::class."' case 'eval'")
+            ->toContain('is a reserved JavaScript/TypeScript word');
+    }
+
+    public function test_enum_registry_rejects_invalid_typescript_enum_short_names(): void
+    {
+        $registry = new EnumRegistry;
+
+        $errors = $registry->validateEnums([
+            delete::class,
+            ENTRIES::class,
+        ]);
+
+        expect($errors[delete::class])
+            ->toContain("Enum '".delete::class."' short name 'delete'")
+            ->toContain('is a reserved JavaScript/TypeScript word')
+            ->and($errors[ENTRIES::class])
+            ->toContain("Enum '".ENTRIES::class."' short name 'ENTRIES'")
+            ->toContain('conflicts with a generated TypeScript identifier');
     }
 
     public function test_translated_label_with_multiple_locales(): void

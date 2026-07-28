@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use Illuminate\Support\Facades\Log;
 use Olivermbs\Enumshare\Attributes\ExportMethod;
 use Olivermbs\Enumshare\Support\EnumExtractor;
 
@@ -38,6 +39,17 @@ enum TestContactType: int
     }
 }
 
+enum ReservedExportMethodName: string
+{
+    case Active = 'active';
+
+    #[ExportMethod('label')]
+    public function customLabel(): string
+    {
+        return 'Overridden';
+    }
+}
+
 it('exports custom method results as properties', function () {
     $extractor = new EnumExtractor;
     $result = $extractor->extract(TestContactType::class);
@@ -58,4 +70,20 @@ it('exports custom method results as properties', function () {
     expect($phoneEntry)->toHaveKey('requiresPhoneNumber');
     expect($phoneEntry['requiresPhoneNumber'])->toBeTrue();
     expect($emailEntry['requiresPhoneNumber'])->toBeFalse();
+});
+
+it('skips and warns about custom methods using reserved entry keys', function () {
+    Log::spy();
+
+    $result = (new EnumExtractor)->extract(ReservedExportMethodName::class);
+
+    expect($result['entries'][0]['label'])->toBe('Active');
+
+    Log::shouldHaveReceived('warning')
+        ->once()
+        ->with('Enumshare export method uses a reserved entry key', [
+            'enum' => ReservedExportMethodName::class,
+            'method' => 'customLabel',
+            'key' => 'label',
+        ]);
 });

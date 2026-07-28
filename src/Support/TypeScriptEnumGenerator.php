@@ -35,8 +35,8 @@ class TypeScriptEnumGenerator
     {
         $isMultilingual = $this->hasMultilingualLabels($entries);
         $metaType = $this->buildMetaType($enumName, $entries, $exportTypes);
-        $entriesConst = $this->buildEntriesConstant($entries, $backingType, $isMultilingual);
-        $types = $this->buildTypes($enumName, $backingType, $isMultilingual, $exportTypes);
+        $entriesConst = $this->buildEntriesConstant($entries, $backingType);
+        $types = $this->buildTypes($enumName, $entries, $backingType, $isMultilingual, $exportTypes);
         $derived = $this->buildDerivedConstants($enumName, $backingType, $isMultilingual);
         $entryConsts = $this->buildEntryConstants($entries);
         $labelHelper = $isMultilingual ? $this->buildLabelHelper() : '';
@@ -96,7 +96,7 @@ class TypeScriptEnumGenerator
         foreach ($entries as $entry) {
             $value = $backingType
                 ? $this->formatValue($entry['value'], $backingType)
-                : "'".addslashes($entry['key'])."'";
+                : $this->jsonEncode($entry['key']);
             $lines[] = "  {$entry['key']}: {$value},";
         }
 
@@ -110,7 +110,7 @@ class TypeScriptEnumGenerator
         }
 
         if ($backingType === 'string') {
-            return "'".addslashes((string) $value)."'";
+            return $this->jsonEncode((string) $value);
         }
 
         return (string) $value;
@@ -131,6 +131,7 @@ class TypeScriptEnumGenerator
     {
         $export = $exportTypes ? 'export ' : '';
         $metaTypes = [];
+        $metaPresence = [];
 
         foreach ($entries as $entry) {
             if (! is_array($entry['meta']) || empty($entry['meta'])) {
@@ -138,6 +139,7 @@ class TypeScriptEnumGenerator
             }
             foreach ($entry['meta'] as $key => $value) {
                 $metaTypes[$key][] = $this->phpToTsType($value);
+                $metaPresence[$key] = ($metaPresence[$key] ?? 0) + 1;
             }
         }
 
@@ -148,7 +150,8 @@ class TypeScriptEnumGenerator
         $props = [];
         foreach ($metaTypes as $key => $types) {
             $union = implode(' | ', array_unique($types));
-            $props[] = "  readonly {$key}: {$union};";
+            $optional = $metaPresence[$key] < count($entries) ? '?' : '';
+            $props[] = "  readonly {$key}{$optional}: {$union};";
         }
         $propsStr = implode("\n", $props);
 
@@ -162,34 +165,59 @@ class TypeScriptEnumGenerator
             is_bool($value) => 'boolean',
             is_int($value), is_float($value) => 'number',
             is_string($value) => 'string',
-            is_array($value) && empty($value) => 'Record<string, unknown>',
-            is_array($value) && array_is_list($value) => $this->phpToTsType($value[0]).'[]',
+            is_array($value) && array_is_list($value) => $this->phpListToTsType($value),
             is_array($value) => 'Record<string, unknown>',
             default => 'unknown',
         };
     }
 
-    protected function buildEntriesConstant(array $entries, ?string $backingType, bool $isMultilingual): string
+    protected function phpListToTsType(array $value): string
+    {
+        if ($value === []) {
+            return 'readonly unknown[]';
+        }
+
+        $elementTypes = array_values(array_unique(array_map(
+            fn (mixed $element): string => $this->phpToTsType($element),
+            $value
+        )));
+        $elementType = implode(' | ', $elementTypes);
+        $requiresParentheses = count($elementTypes) > 1
+            || str_starts_with($elementType, 'readonly ');
+
+        return 'readonly '.($requiresParentheses ? "({$elementType})" : $elementType).'[]';
+    }
+
+    protected function buildEntriesConstant(array $entries, ?string $backingType): string
     {
         $items = [];
         foreach ($entries as $entry) {
             $value = $this->formatValue($entry['value'], $backingType);
-            $label = $isMultilingual
-                ? json_encode($entry['label'])
-                : "'".addslashes($entry['label'])."'";
-            $meta = empty($entry['meta']) ? '{}' : json_encode($entry['meta']);
+            $label = $this->jsonEncode($entry['label']);
+            $meta = $this->jsonEncode((object) $entry['meta']);
+            $properties = [
+                'key: '.$this->jsonEncode($entry['key']),
+                "value: {$value}",
+                "label: {$label}",
+                "meta: {$meta}",
+            ];
 
-            $items[] = "  { key: '{$entry['key']}', value: {$value}, label: {$label}, meta: {$meta} },";
+            foreach ($this->customEntryData($entry) as $key => $customValue) {
+                $properties[] = $this->formatPropertyName($key).': '.$this->jsonEncode($customValue);
+            }
+
+            $items[] = '  { '.implode(', ', $properties).' },';
         }
 
         return "const ENTRIES = [\n".implode("\n", $items)."\n] as const;";
     }
 
-    protected function buildTypes(string $enumName, ?string $backingType, bool $isMultilingual, bool $exportTypes): string
+    protected function buildTypes(string $enumName, array $entries, ?string $backingType, bool $isMultilingual, bool $exportTypes): string
     {
         $export = $exportTypes ? 'export ' : '';
         $labelType = $isMultilingual ? 'string | Record<string, string>' : 'string';
         $valueType = $backingType ? "{$enumName}Value" : "{$enumName}Key";
+        $customProperties = $this->buildCustomEntryTypeProperties($entries);
 
         $valueTypeDef = $backingType
             ? "{$export}type {$enumName}Value = NonNullable<typeof ENTRIES[number]['value']>;"
@@ -203,6 +231,7 @@ class TypeScriptEnumGenerator
           readonly value: {$entryValueType};
           readonly label: {$labelType};
           readonly meta: {$enumName}Meta;
+        {$customProperties}
         };
         {$export}type {$enumName}Key = typeof ENTRIES[number]['key'];
         {$valueTypeDef}
@@ -219,16 +248,16 @@ class TypeScriptEnumGenerator
             const KEYS: readonly {$enumName}Key[] = ENTRIES.map(e => e.key);
             const VALUES: readonly {$enumName}Value[] = ENTRIES.map(e => e.value!);
             const OPTIONS: readonly {$enumName}Option[] = ENTRIES.map(e => ({ value: e.value!, label: {$labelExpr} }));
-            const BY_KEY = new Map(ENTRIES.map(e => [e.key, e]));
-            const BY_VALUE = new Map(ENTRIES.map(e => [e.value, e]));
+            const BY_KEY = new globalThis.Map(ENTRIES.map(e => [e.key, e]));
+            const BY_VALUE = new globalThis.Map(ENTRIES.map(e => [e.value, e]));
             TS;
         }
 
         return <<<TS
         const KEYS: readonly {$enumName}Key[] = ENTRIES.map(e => e.key);
-        const VALUES: readonly {$enumName}Key[] = KEYS;
+        const VALUES: readonly {$enumName}Value[] = KEYS;
         const OPTIONS: readonly {$enumName}Option[] = ENTRIES.map(e => ({ value: e.key, label: {$labelExpr} }));
-        const BY_KEY = new Map(ENTRIES.map(e => [e.key, e]));
+        const BY_KEY = new globalThis.Map(ENTRIES.map(e => [e.key, e]));
         TS;
     }
 
@@ -247,7 +276,7 @@ class TypeScriptEnumGenerator
         return <<<'TS'
         function resolveLabel(label: string | Record<string, string>, locale?: string): string {
           if (typeof label === 'string') return label;
-          return (locale && label[locale]) || label.en || Object.values(label)[0] || '';
+          return (locale && label[locale]) || label.en || globalThis.Object.values(label)[0] || '';
         }
         TS;
     }
@@ -266,7 +295,7 @@ class TypeScriptEnumGenerator
     {
         $valueType = $backingType === 'string' ? 'string' : ($backingType ? 'number' : 'string');
         $typeCheck = $backingType === 'string' ? 'string' : ($backingType ? 'number' : 'string');
-        $entryType = 'typeof ENTRIES[number]';
+        $entryType = "{$enumName}Entry";
 
         $fromMethod = $backingType
             ? "from(value: {$valueType} | null | undefined): {$entryType} | null { return value == null ? null : BY_VALUE.get(value as {$enumName}Value) ?? null; },"
@@ -287,5 +316,49 @@ class TypeScriptEnumGenerator
           hasKey(key: unknown): key is {$enumName}Key { return typeof key === 'string' && BY_KEY.has(key as {$enumName}Key); },
           {$labelsMethod}
         TS;
+    }
+
+    protected function buildCustomEntryTypeProperties(array $entries): string
+    {
+        $types = [];
+        $presence = [];
+
+        foreach ($entries as $entry) {
+            foreach ($this->customEntryData($entry) as $key => $value) {
+                $types[$key][] = $this->phpToTsType($value);
+                $presence[$key] = ($presence[$key] ?? 0) + 1;
+            }
+        }
+
+        $properties = [];
+        foreach ($types as $key => $propertyTypes) {
+            $optional = $presence[$key] < count($entries) ? '?' : '';
+            $union = implode(' | ', array_unique($propertyTypes));
+            $properties[] = '  readonly '.$this->formatPropertyName($key)."{$optional}: {$union};";
+        }
+
+        return implode("\n", $properties);
+    }
+
+    protected function customEntryData(array $entry): array
+    {
+        return array_diff_key($entry, array_flip(['key', 'value', 'label', 'meta']));
+    }
+
+    protected function jsonEncode(mixed $value): string
+    {
+        return json_encode(
+            $value,
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        );
+    }
+
+    protected function formatPropertyName(string $name): string
+    {
+        if (preg_match('/^[A-Za-z_$][A-Za-z0-9_$]*$/', $name) === 1) {
+            return $name;
+        }
+
+        return $this->jsonEncode($name);
     }
 }

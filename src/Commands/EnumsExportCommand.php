@@ -69,7 +69,7 @@ class EnumsExportCommand extends Command
 
             $this->info("Exported {$generated} enum(s) to: {$path}");
             if ($skipped > 0) {
-                $this->comment("Skipped {$skipped} enum(s) (existing files).");
+                $this->comment("Skipped {$skipped} enum(s) (content unchanged).");
             }
 
             return self::SUCCESS;
@@ -77,7 +77,7 @@ class EnumsExportCommand extends Command
             $this->error("Validation failed: {$e->getMessage()}");
 
             return self::FAILURE;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $this->error("Export failed: {$e->getMessage()}");
 
             return self::FAILURE;
