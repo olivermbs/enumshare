@@ -20,7 +20,7 @@ class EnumExporter
         $path = $options['path'] ?? config('enumshare.path', resource_path('js/Enums'));
         $exportTypes = $options['types'] ?? false;
         $force = $options['force'] ?? false;
-        $index = $options['index'] ?? false;
+        $index = ($options['index'] ?? false) || config('enumshare.index', false);
         $listOnly = $options['list'] ?? false;
 
         $warnings = $this->validateConfiguration();

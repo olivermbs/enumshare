@@ -107,6 +107,7 @@ return [
     ],
     'path' => resource_path('js/Enums'),
     'mode' => 'full',  // 'full' or 'minimal'
+    'index' => false,  // Generate index.ts on every export
     'auto_discovery' => true,
     'auto_paths' => ['app/Enums'],
 ];

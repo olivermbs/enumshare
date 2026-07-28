@@ -98,6 +98,20 @@ class EnumCommandsTest extends TestCase
             ->assertFailed();
     }
 
+    public function test_index_config_option_generates_barrel_file(): void
+    {
+        $this->createTestEnumFile();
+        config()->set('enumshare.index', true);
+
+        $tempDir = sys_get_temp_dir().'/enumshare-index-config-'.time();
+
+        $this->artisan('enums:export', ['--path' => $tempDir])->assertSuccessful();
+
+        $this->assertFileExists("{$tempDir}/index.ts");
+
+        File::deleteDirectory($tempDir);
+    }
+
     protected function createTestEnumFile(): void
     {
         $directory = $this->testEnumsPath.'/App/Enums';
