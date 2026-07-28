@@ -127,13 +127,23 @@ php artisan enums:export --path=...   # Override export path
 php artisan enums:export --locale=... # Override locale for labels
 ```
 
-For CI drift detection:
+`php artisan about` shows an Enumshare section with the active configuration.
 
-```bash
-php artisan enums:export --check
+## CI: Fail on Drift
+
+`--check` verifies the generated files without writing anything and exits non-zero when
+any file is stale or missing — so enum drift becomes a failing build instead of a runtime
+surprise:
+
+```yaml
+# .github/workflows/ci.yml
+- name: Check exported enums are up to date
+  run: php artisan enums:export --check
 ```
 
-`php artisan about` shows an Enumshare section with the active configuration.
+It also lists orphaned files (generated for enums that no longer exist); clean those up
+locally with `enums:export --prune`, which only ever deletes files carrying the
+auto-generated marker.
 
 ## Attributes
 
@@ -146,6 +156,35 @@ php artisan enums:export --check
 | `#[DontExport]` | Exclude enum from export |
 
 **Note:** Enums are keyed by short name (class basename). Duplicate names across namespaces will cause a collision error.
+
+### Computed properties with `#[ExportMethod]`
+
+Mark any parameterless public method with `#[ExportMethod]` and its per-case result is
+exported as a typed property on every entry:
+
+![ExportMethod PHP enum](docs/export-method.png)
+
+**↓ Use it in TypeScript ↓**
+
+![ExportMethod TypeScript usage](docs/export-method-output.png)
+
+### Keeping enums backend-only
+
+Auto-discovery exports **every** enum in the configured paths. Mark internal enums with
+`#[DontExport]` and they are excluded everywhere — the attribute wins even when the enum
+is listed explicitly in the config (you get a warning about the conflict).
+
+## Multilingual Labels
+
+Add locales to the config and `#[TranslatedLabel]` labels are exported for every locale:
+
+```php
+'locales' => ['en', 'de'],
+```
+
+Each label becomes an object keyed by locale (`{ en: 'Active', de: 'Aktiv' }`), and the
+generated file includes a resolver — `Status.labels('de')` returns the German labels,
+while each entry keeps the full label object for custom handling.
 
 ## Auto-Regeneration with Vite
 
