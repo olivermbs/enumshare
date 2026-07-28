@@ -38,6 +38,10 @@ class EnumExporter
             ];
         }
 
+        if ($options['check'] ?? false) {
+            return $this->check($manifest, $path, $exportTypes, $index, $warnings);
+        }
+
         if (empty($manifest)) {
             return [
                 'mode' => 'export',
@@ -70,6 +74,45 @@ class EnumExporter
         $stats['warnings'] = $warnings;
 
         return $stats;
+    }
+
+    protected function check(array $manifest, string $enumsDir, bool $exportTypes, bool $index, array $warnings): array
+    {
+        $mode = config('enumshare.mode', 'full');
+        $result = ['mode' => 'check', 'upToDate' => [], 'stale' => [], 'missing' => [], 'orphans' => []];
+        $expectedPaths = [];
+
+        foreach ($manifest as $enumName => $enumData) {
+            $content = $this->generator->generate($enumName, $enumData, $exportTypes, $mode);
+            $filePath = "{$enumsDir}/{$enumName}.ts";
+            $expectedPaths[] = $filePath;
+            $result[$this->classify($filePath, $content)][] = basename($filePath);
+        }
+
+        if ($index) {
+            $indexPath = "{$enumsDir}/index.ts";
+            $expectedPaths[] = $indexPath;
+            $result[$this->classify($indexPath, $this->indexContent($manifest))][] = 'index.ts';
+        }
+
+        $result['orphans'] = array_map('basename', $this->findOrphans($enumsDir, $expectedPaths));
+        $result['path'] = $enumsDir;
+        $result['warnings'] = $warnings;
+
+        return $result;
+    }
+
+    protected function classify(string $filePath, string $content): string
+    {
+        if (! File::exists($filePath)) {
+            return 'missing';
+        }
+
+        if (hash('xxh3', File::get($filePath)) === hash('xxh3', $content)) {
+            return 'upToDate';
+        }
+
+        return 'stale';
     }
 
     protected function validateConfiguration(): array
@@ -195,13 +238,16 @@ class EnumExporter
 
     protected function generateIndexFile(string $enumsDir, array $manifest): void
     {
+        File::put("{$enumsDir}/index.ts", $this->indexContent($manifest));
+    }
+
+    protected function indexContent(array $manifest): string
+    {
         $exports = array_map(
             fn ($name) => "export { {$name} } from './{$name}';",
             array_keys($manifest)
         );
 
-        $content = "// Auto-generated. Do not edit.\n\n".implode("\n", $exports)."\n";
-
-        File::put("{$enumsDir}/index.ts", $content);
+        return "// Auto-generated. Do not edit.\n\n".implode("\n", $exports)."\n";
     }
 }

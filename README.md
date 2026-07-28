@@ -121,9 +121,16 @@ php artisan enums:export --force      # Rewrite all, even if unchanged
 php artisan enums:export --list       # List enums that would be exported
 php artisan enums:export --index      # Generate barrel index file
 php artisan enums:export --prune      # Delete stale generated files
+php artisan enums:export --check      # Verify generated files are up to date
 php artisan enums:export --types      # Export TypeScript helper types
 php artisan enums:export --path=...   # Override export path
 php artisan enums:export --locale=... # Override locale for labels
+```
+
+For CI drift detection:
+
+```bash
+php artisan enums:export --check
 ```
 
 ## Attributes

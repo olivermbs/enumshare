@@ -15,6 +15,7 @@ class EnumsExportCommand extends Command
                             {--types : Export TypeScript helper types}
                             {--force : Rewrite all files, even if unchanged}
                             {--prune : Delete generated files for enums that no longer exist}
+                            {--check : Verify generated files are up to date without writing}
                             {--list : List enums that would be exported}';
 
     protected $description = 'Export enums to TypeScript files';
@@ -29,6 +30,7 @@ class EnumsExportCommand extends Command
                 'types' => $this->option('types'),
                 'force' => $this->option('force'),
                 'prune' => $this->option('prune'),
+                'check' => $this->option('check'),
                 'list' => $this->option('list'),
             ]);
 
@@ -57,6 +59,28 @@ class EnumsExportCommand extends Command
                 }
 
                 return self::SUCCESS;
+            }
+
+            if (($result['mode'] ?? null) === 'check') {
+                foreach ($result['stale'] as $file) {
+                    $this->error("Stale: {$file}");
+                }
+                foreach ($result['missing'] as $file) {
+                    $this->error("Missing: {$file}");
+                }
+                foreach ($result['orphans'] as $file) {
+                    $this->warn("Orphaned (would be pruned): {$file}");
+                }
+
+                if ($result['stale'] === [] && $result['missing'] === []) {
+                    $this->info('Everything up to date.');
+
+                    return self::SUCCESS;
+                }
+
+                $this->error('Generated enums are out of date. Run: php artisan enums:export');
+
+                return self::FAILURE;
             }
 
             if (($result['generated'] ?? 0) === 0 && ($result['skipped'] ?? 0) === 0) {
