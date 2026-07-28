@@ -66,4 +66,23 @@ class PruneTest extends TestCase
 
         $this->assertFileExists("{$this->out}/index.ts");
     }
+
+    public function test_prune_keeps_current_files_with_trailing_slash_path(): void
+    {
+        $this->artisan('enums:export', ['--path' => $this->out.'/', '--prune' => true])->assertSuccessful();
+
+        $this->assertFileExists("{$this->out}/PruneKeptEnum.ts");
+    }
+
+    public function test_prune_deletes_orphans_when_manifest_is_empty(): void
+    {
+        config()->set('enumshare.enums', []);
+        File::put("{$this->out}/OldEnum.ts", "// Auto-generated from App\\Enums\\OldEnum\n");
+
+        $this->artisan('enums:export', ['--path' => $this->out, '--prune' => true])
+            ->expectsOutput('No enums found to export.')
+            ->assertSuccessful();
+
+        $this->assertFileDoesNotExist("{$this->out}/OldEnum.ts");
+    }
 }

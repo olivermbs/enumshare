@@ -62,6 +62,11 @@ enum ENTRIES
     case Active;
 }
 
+enum SelfNamedCaseCollision
+{
+    case SelfNamedCaseCollision;
+}
+
 enum OrderStatus: string
 {
     #[TranslatedLabel('orders.pending')]
@@ -225,6 +230,18 @@ class EnumExportTest extends TestCase
             ->and($errors[ENTRIES::class])
             ->toContain("Enum '".ENTRIES::class."' short name 'ENTRIES'")
             ->toContain('conflicts with a generated TypeScript identifier');
+    }
+
+    public function test_enum_registry_rejects_case_name_matching_enum_short_name(): void
+    {
+        $registry = new EnumRegistry;
+
+        $errors = $registry->validateEnums([SelfNamedCaseCollision::class]);
+
+        expect($errors[SelfNamedCaseCollision::class])
+            ->toContain("Enum '".SelfNamedCaseCollision::class."' case 'SelfNamedCaseCollision'")
+            ->toContain('matches its short name')
+            ->toContain('duplicate TypeScript identifier');
     }
 
     public function test_translated_label_with_multiple_locales(): void

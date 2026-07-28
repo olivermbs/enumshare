@@ -86,6 +86,10 @@ class EnumsExportCommand extends Command
             if (($result['generated'] ?? 0) === 0 && ($result['skipped'] ?? 0) === 0) {
                 $this->warn('No enums found to export.');
 
+                foreach ($result['pruned'] ?? [] as $prunedFile) {
+                    $this->comment("Pruned {$prunedFile}");
+                }
+
                 return self::SUCCESS;
             }
 

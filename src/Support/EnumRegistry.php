@@ -198,6 +198,10 @@ class EnumRegistry
             }
 
             foreach ($enumClass::cases() as $case) {
+                if ($case->name === $shortName) {
+                    return "Enum '{$enumClass}' case '{$case->name}' matches its short name and would create a duplicate TypeScript identifier.";
+                }
+
                 if (in_array($case->name, self::GENERATED_IDENTIFIERS, true)) {
                     return "Enum '{$enumClass}' case '{$case->name}' conflicts with a generated TypeScript identifier.";
                 }

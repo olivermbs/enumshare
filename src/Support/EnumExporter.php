@@ -20,6 +20,12 @@ class EnumExporter
     {
         $locale = $options['locale'] ?? config('enumshare.locale');
         $path = $options['path'] ?? config('enumshare.path', resource_path('js/Enums'));
+        $path = rtrim($path, '/'.DIRECTORY_SEPARATOR);
+        if ($path === '') {
+            $path = DIRECTORY_SEPARATOR;
+        } elseif (preg_match('/^[A-Za-z]:$/', $path) === 1) {
+            $path .= DIRECTORY_SEPARATOR;
+        }
         $exportTypes = $options['types'] ?? false;
         $force = $options['force'] ?? false;
         $index = ($options['index'] ?? false) || config('enumshare.index', false);
@@ -43,13 +49,19 @@ class EnumExporter
         }
 
         if (empty($manifest)) {
-            return [
+            $result = [
                 'mode' => 'export',
                 'generated' => 0,
                 'skipped' => 0,
                 'path' => $path,
                 'warnings' => $warnings,
             ];
+
+            if ($options['prune'] ?? false) {
+                $result['pruned'] = $this->pruneOrphans($path, []);
+            }
+
+            return $result;
         }
 
         $this->ensureDirectoryExists($path);
