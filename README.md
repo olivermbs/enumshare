@@ -132,6 +132,7 @@ php artisan enums:export --locale=... # Override locale for labels
 | `#[TranslatedLabel('key')]` | Translation key |
 | `#[Meta(['key' => 'value'])]` | Metadata |
 | `#[ExportMethod]` | Export method result |
+| `#[DontExport]` | Exclude enum from export |
 
 **Note:** Enums are keyed by short name (class basename). Duplicate names across namespaces will cause a collision error.
 
