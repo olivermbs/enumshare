@@ -133,6 +133,8 @@ For CI drift detection:
 php artisan enums:export --check
 ```
 
+`php artisan about` shows an Enumshare section with the active configuration.
+
 ## Attributes
 
 | Attribute | Description |

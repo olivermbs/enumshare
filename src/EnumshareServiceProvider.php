@@ -2,6 +2,7 @@
 
 namespace Olivermbs\Enumshare;
 
+use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
 use Olivermbs\Enumshare\Commands\EnumsExportCommand;
 use Olivermbs\Enumshare\Support\EnumAutoDiscovery;
@@ -42,6 +43,15 @@ class EnumshareServiceProvider extends ServiceProvider
 
             $this->commands([
                 EnumsExportCommand::class,
+            ]);
+
+            AboutCommand::add('Enumshare', fn () => [
+                'Mode' => config('enumshare.mode', 'full'),
+                'Path' => str_replace(base_path().DIRECTORY_SEPARATOR, '', config('enumshare.path', resource_path('js/Enums'))),
+                'Auto-discovery' => config('enumshare.auto_discovery', false)
+                    ? 'Enabled ('.implode(', ', config('enumshare.auto_paths', [])).')'
+                    : 'Disabled',
+                'Enums' => count($this->app->make(EnumRegistry::class)->exportableEnumClasses()),
             ]);
         }
     }

@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Olivermbs\Enumshare\Support\EnumExporter;
 use Olivermbs\Enumshare\Tests\TestCase;
@@ -110,6 +111,25 @@ class EnumCommandsTest extends TestCase
         $this->assertFileExists("{$tempDir}/index.ts");
 
         File::deleteDirectory($tempDir);
+    }
+
+    public function test_about_command_shows_enumshare_section(): void
+    {
+        $this->createTestEnumFile();
+
+        $this->assertSame(
+            0,
+            Artisan::call('about', ['--json' => true])
+        );
+
+        $output = json_decode(
+            Artisan::output(),
+            true,
+            flags: JSON_THROW_ON_ERROR
+        );
+
+        $this->assertArrayHasKey('enumshare', $output);
+        $this->assertSame('full', $output['enumshare']['mode']);
     }
 
     protected function createTestEnumFile(): void
