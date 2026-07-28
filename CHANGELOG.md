@@ -2,6 +2,26 @@
 
 All notable changes to `enumshare` will be documented in this file.
 
+## v1.1.0 - 2026-07-28
+
+### Features
+
+- Add `--check` for CI drift detection without writing files
+- Add `--prune` for marker-guarded orphan cleanup
+- Add `#[DontExport]` to exclude enums from export
+- Add the `index` config option for automatic barrel file generation
+- Add Enumshare details to `php artisan about`
+
+### Fixes
+
+- Export `#[ExportMethod]` results to generated TypeScript entries
+- Use JSON encoding for safe TypeScript string escaping
+- Generate TypeScript compatible with `noUnusedLocals`
+- Validate enum and case names against reserved and generated identifiers
+- Qualify runtime globals through `globalThis` to prevent shadowing
+- Support glob and absolute paths during enum auto-discovery
+- Mark metadata keys omitted from some enum cases as optional
+
 ## v1.0.0 - 2026-01-08
 
 ### First Stable Release
