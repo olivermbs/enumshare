@@ -2,6 +2,15 @@
 
 All notable changes to `enumshare` will be documented in this file.
 
+## v1.1.1 - 2026-07-28
+
+### Fixes
+
+- Prune keeps generated files on Windows (separator-agnostic path comparison)
+- Prune runs when all enums have been retired (empty manifest)
+- Normalize export paths with trailing slashes so prune never deletes fresh output
+- Reject enum case names matching the enum's own short name
+
 ## v1.1.0 - 2026-07-28
 
 ### Features
