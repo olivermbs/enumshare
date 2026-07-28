@@ -17,7 +17,7 @@ class EnumExtractor
         $reflection = new ReflectionEnum($enumClass);
         $enumName = $reflection->getShortName();
         $isBacked = $reflection->isBacked();
-        $backingType = $isBacked ? (string) $reflection->getBackingType() : null;
+        $backingType = $isBacked ? $reflection->getBackingType()->getName() : null;
         $effectiveLocale = $locale ?? app()->getLocale();
         $configuredLocales = config('enumshare.locales', []);
 
