@@ -14,6 +14,7 @@ class EnumsExportCommand extends Command
                             {--index : Generate barrel index file}
                             {--types : Export TypeScript helper types}
                             {--force : Rewrite all files, even if unchanged}
+                            {--prune : Delete generated files for enums that no longer exist}
                             {--list : List enums that would be exported}';
 
     protected $description = 'Export enums to TypeScript files';
@@ -27,6 +28,7 @@ class EnumsExportCommand extends Command
                 'index' => $this->option('index'),
                 'types' => $this->option('types'),
                 'force' => $this->option('force'),
+                'prune' => $this->option('prune'),
                 'list' => $this->option('list'),
             ]);
 
@@ -70,6 +72,10 @@ class EnumsExportCommand extends Command
             $this->info("Exported {$generated} enum(s) to: {$path}");
             if ($skipped > 0) {
                 $this->comment("Skipped {$skipped} enum(s) (content unchanged).");
+            }
+
+            foreach ($result['pruned'] ?? [] as $prunedFile) {
+                $this->comment("Pruned {$prunedFile}");
             }
 
             return self::SUCCESS;

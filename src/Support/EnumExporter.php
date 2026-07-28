@@ -9,6 +9,8 @@ use ReflectionClass;
 
 class EnumExporter
 {
+    protected const array GENERATED_MARKERS = ['// Auto-generated from', '// Auto-generated. Do not edit.'];
+
     public function __construct(
         protected EnumRegistry $registry,
         protected TypeScriptEnumGenerator $generator
@@ -53,6 +55,16 @@ class EnumExporter
         if ($index) {
             $this->generateIndexFile($path, $manifest);
         }
+
+        $keepPaths = $stats['files'];
+        if ($index) {
+            $keepPaths[] = "{$path}/index.ts";
+        }
+
+        if ($options['prune'] ?? false) {
+            $stats['pruned'] = $this->pruneOrphans($path, $keepPaths);
+        }
+        unset($stats['files']);
 
         $stats['path'] = $path;
         $stats['warnings'] = $warnings;
@@ -99,12 +111,13 @@ class EnumExporter
 
     protected function writeEnumFiles(array $manifest, string $enumsDir, bool $exportTypes, bool $force): array
     {
-        $stats = ['mode' => 'export', 'generated' => 0, 'skipped' => 0];
+        $stats = ['mode' => 'export', 'generated' => 0, 'skipped' => 0, 'files' => []];
         $mode = config('enumshare.mode', 'full');
 
         foreach ($manifest as $enumName => $enumData) {
             $content = $this->generator->generate($enumName, $enumData, $exportTypes, $mode);
             $filePath = "{$enumsDir}/{$enumName}.ts";
+            $stats['files'][] = $filePath;
 
             if ($this->shouldSkipFile($filePath, $content, $force)) {
                 $stats['skipped']++;
@@ -115,6 +128,60 @@ class EnumExporter
         }
 
         return $stats;
+    }
+
+    public function findOrphans(string $path, array $keepPaths): array
+    {
+        if (! File::isDirectory($path)) {
+            return [];
+        }
+
+        $orphans = [];
+
+        foreach (File::files($path) as $file) {
+            if ($file->getExtension() !== 'ts') {
+                continue;
+            }
+
+            $filePath = $file->getPathname();
+
+            if (in_array($filePath, $keepPaths, true)) {
+                continue;
+            }
+
+            if (! $this->hasGeneratedMarker($filePath)) {
+                continue;
+            }
+
+            $orphans[] = $filePath;
+        }
+
+        return $orphans;
+    }
+
+    public function pruneOrphans(string $path, array $keepPaths): array
+    {
+        $deleted = [];
+
+        foreach ($this->findOrphans($path, $keepPaths) as $orphan) {
+            File::delete($orphan);
+            $deleted[] = basename($orphan);
+        }
+
+        return $deleted;
+    }
+
+    protected function hasGeneratedMarker(string $filePath): bool
+    {
+        $content = File::get($filePath);
+
+        foreach (self::GENERATED_MARKERS as $marker) {
+            if (str_contains($content, $marker)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function shouldSkipFile(string $filePath, string $content, bool $force): bool
