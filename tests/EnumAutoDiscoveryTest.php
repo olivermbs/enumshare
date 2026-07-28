@@ -117,7 +117,7 @@ class EnumAutoDiscoveryTest extends TestCase
         $this->createTestEnumFile('DiscoveredEnum', 'App\\Enums');
 
         // Create a configured enum (defined in test)
-        $configuredEnums = [\TestConfiguredEnum::class];
+        $configuredEnums = [TestConfiguredEnum::class];
 
         $discovery = new EnumAutoDiscovery(['test_enums']);
         $registry = new EnumRegistry($configuredEnums, $discovery);
