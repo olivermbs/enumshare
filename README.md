@@ -59,11 +59,11 @@ Status.options         // [{ value: 'active', label: 'Active' }, ...]
 
 ### Generated Output
 
-![PHP Enum](docs/PHP_enum.png)
+![PHP Enum](docs/status-php.png)
 
 **↓ Generates ↓**
 
-![Generated TypeScript](docs/generated-output.png)
+![Generated TypeScript](docs/status-ts.png)
 
 ## Output Modes
 
