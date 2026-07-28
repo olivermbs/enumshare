@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\File;
+use Olivermbs\Enumshare\Support\EnumExporter;
 use Olivermbs\Enumshare\Tests\TestCase;
 
 enum PruneKeptEnum: string
@@ -84,5 +85,19 @@ class PruneTest extends TestCase
             ->assertSuccessful();
 
         $this->assertFileDoesNotExist("{$this->out}/OldEnum.ts");
+    }
+
+    public function test_find_orphans_compares_path_separators_agnostically(): void
+    {
+        $filePath = "{$this->out}/PruneKeptEnum.ts";
+        File::put($filePath, "// Auto-generated from App\\Enums\\PruneKeptEnum\n");
+        $backslashPath = str_replace('/', '\\', $filePath);
+
+        $orphans = $this->app->make(EnumExporter::class)->findOrphans(
+            $this->out,
+            [$backslashPath]
+        );
+
+        $this->assertSame([], $orphans);
     }
 }

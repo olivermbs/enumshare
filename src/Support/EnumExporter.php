@@ -192,6 +192,10 @@ class EnumExporter
         }
 
         $orphans = [];
+        $normalizedKeepPaths = array_map(
+            fn (string $keepPath): string => $this->normalizePath($keepPath),
+            $keepPaths
+        );
 
         foreach (File::files($path) as $file) {
             if ($file->getExtension() !== 'ts') {
@@ -200,7 +204,7 @@ class EnumExporter
 
             $filePath = $file->getPathname();
 
-            if (in_array($filePath, $keepPaths, true)) {
+            if (in_array($this->normalizePath($filePath), $normalizedKeepPaths, true)) {
                 continue;
             }
 
@@ -212,6 +216,11 @@ class EnumExporter
         }
 
         return $orphans;
+    }
+
+    protected function normalizePath(string $path): string
+    {
+        return rtrim(str_replace('\\', '/', $path), '/');
     }
 
     public function pruneOrphans(string $path, array $keepPaths): array
