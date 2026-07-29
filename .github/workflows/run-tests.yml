@@ -2,6 +2,8 @@ name: run-tests
 
 on:
   push:
+    branches: [main]
+    tags: ['v*']
   pull_request:
 
 concurrency:
@@ -11,7 +13,7 @@ concurrency:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 5
+    timeout-minutes: 10
     strategy:
       fail-fast: true
       matrix:
