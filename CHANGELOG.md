@@ -2,6 +2,12 @@
 
 All notable changes to `enumshare` will be documented in this file.
 
+## v1.2.0 - 2026-07-29
+
+### Added
+
+- Laravel 13 support (Pest 4, Testbench 11, Symfony 8 components)
+
 ## v1.1.1 - 2026-07-28
 
 ### Fixes

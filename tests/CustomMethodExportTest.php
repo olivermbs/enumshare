@@ -73,17 +73,16 @@ it('exports custom method results as properties', function () {
 });
 
 it('skips and warns about custom methods using reserved entry keys', function () {
-    Log::spy();
-
-    $result = (new EnumExtractor)->extract(ReservedExportMethodName::class);
-
-    expect($result['entries'][0]['label'])->toBe('Active');
-
-    Log::shouldHaveReceived('warning')
+    Log::partialMock()
+        ->shouldReceive('warning')
         ->once()
         ->with('Enumshare export method uses a reserved entry key', [
             'enum' => ReservedExportMethodName::class,
             'method' => 'customLabel',
             'key' => 'label',
         ]);
+
+    $result = (new EnumExtractor)->extract(ReservedExportMethodName::class);
+
+    expect($result['entries'][0]['label'])->toBe('Active');
 });
