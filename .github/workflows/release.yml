@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  wait-for-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Wait for tests and static analysis on this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for workflow in run-tests.yml phpstan.yml; do
+            echo "Waiting for ${workflow} on ${GITHUB_SHA}..."
+            while true; do
+              succeeded=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?head_sha=${GITHUB_SHA}&status=success" --jq '.total_count')
+              if [ "${succeeded}" -gt 0 ]; then
+                echo "${workflow} passed."
+                break
+              fi
+
+              runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?head_sha=${GITHUB_SHA}" --jq '.workflow_runs | length')
+              pending=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?head_sha=${GITHUB_SHA}" --jq '[.workflow_runs[] | select(.status != "completed")] | length')
+
+              if [ "${runs}" -gt 0 ] && [ "${pending}" -eq 0 ]; then
+                echo "${workflow} did not pass for ${GITHUB_SHA}; aborting release." >&2
+                exit 1
+              fi
+
+              sleep 20
+            done
+          done
+
+  release:
+    needs: wait-for-ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" > /dev/null 2>&1; then
+            echo "Release ${GITHUB_REF_NAME} already exists, skipping creation."
+            exit 0
+          fi
+
+          gh release create "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes
