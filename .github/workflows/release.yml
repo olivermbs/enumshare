@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  wait-for-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Wait for tests and static analysis on this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for workflow in run-tests.yml phpstan.yml; do
+            echo "Waiting for ${workflow} on ${GITHUB_SHA}..."
+            while true; do
+              succeeded=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?head_sha=${GITHUB_SHA}&status=success" --jq '.total_count')
+              if [ "${succeeded}" -gt 0 ]; then
+                echo "${workflow} passed."
+                break
+              fi
+
+              runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?head_sha=${GITHUB_SHA}" --jq '.workflow_runs | length')
+              pending=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?head_sha=${GITHUB_SHA}" --jq '[.workflow_runs[] | select(.status != "completed")] | length')
+
+              if [ "${runs}" -gt 0 ] && [ "${pending}" -eq 0 ]; then
+                echo "${workflow} did not pass for ${GITHUB_SHA}; aborting release." >&2
+                exit 1
+              fi
+
+              sleep 20
+            done
+          done
+
+  release:
+    needs: wait-for-ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" > /dev/null 2>&1; then
+            echo "Release ${GITHUB_REF_NAME} already exists, skipping creation."
+            exit 0
+          fi
+
+          gh release create "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes
+
+  changelog:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Fetch release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo 'body<<RELEASE_NOTES_EOF'
+            gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json body -q .body
+            echo 'RELEASE_NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update Changelog
+        uses: stefanzweifel/changelog-updater-action@v1
+        with:
+          latest-version: ${{ github.ref_name }}
+          release-notes: ${{ steps.notes.outputs.body }}
+
+      - name: Commit updated CHANGELOG
+        uses: stefanzweifel/git-auto-commit-action@v6
+        with:
+          branch: main
+          commit_message: Update CHANGELOG
+          file_pattern: CHANGELOG.md
