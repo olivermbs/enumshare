@@ -155,6 +155,8 @@ auto-generated marker.
 | `#[ExportMethod]` | Export method result |
 | `#[DontExport]` | Exclude enum from export |
 
+Label resolution order: `#[TranslatedLabel]`, then `#[Label]`, then the `enums.{Enum}.{CASE}` translation key, then a public `label(): string` method on the enum, then the case name.
+
 **Note:** Enums are keyed by short name (class basename). Duplicate names across namespaces will cause a collision error.
 
 ### Computed properties with `#[ExportMethod]`

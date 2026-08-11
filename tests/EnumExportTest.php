@@ -79,6 +79,22 @@ enum OrderStatus: string
     case Cancelled = 'cancelled';
 }
 
+enum LabelMethodStatus: string
+{
+    #[Label('Explicit Label')]
+    case Explicit = 'explicit';
+
+    case FromMethod = 'from_method';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Explicit => 'Method Label Ignored',
+            self::FromMethod => 'Label From Method',
+        };
+    }
+}
+
 class EnumExportTest extends TestCase
 {
     protected EnumExtractor $extractor;
@@ -132,6 +148,22 @@ class EnumExportTest extends TestCase
         $savedEntry = collect($result['entries'])->firstWhere('key', 'Saved');
 
         expect($savedEntry['label'])->toBe('Trip Saved');
+    }
+
+    public function test_label_method_used_before_case_name_fallback(): void
+    {
+        $result = $this->extractor->extract(LabelMethodStatus::class);
+        $entry = collect($result['entries'])->firstWhere('key', 'FromMethod');
+
+        expect($entry['label'])->toBe('Label From Method');
+    }
+
+    public function test_label_attribute_wins_over_label_method(): void
+    {
+        $result = $this->extractor->extract(LabelMethodStatus::class);
+        $entry = collect($result['entries'])->firstWhere('key', 'Explicit');
+
+        expect($entry['label'])->toBe('Explicit Label');
     }
 
     public function test_label_resolution_fallback_to_case_name(): void

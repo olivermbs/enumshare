@@ -76,8 +76,32 @@ class EnumExtractor
             return $translation;
         }
 
+        // Check for a conventional label() method on the enum
+        $methodLabel = $this->resolveLabelMethod($case);
+
+        if ($methodLabel !== null) {
+            return $methodLabel;
+        }
+
         // Fallback to case name
         return $case->name;
+    }
+
+    protected function resolveLabelMethod($case): ?string
+    {
+        if (! method_exists($case, 'label')) {
+            return null;
+        }
+
+        $method = new ReflectionMethod($case, 'label');
+
+        if (! $method->isPublic() || $method->isStatic() || $method->getNumberOfRequiredParameters() > 0) {
+            return null;
+        }
+
+        $label = $case->label();
+
+        return is_string($label) ? $label : null;
     }
 
     protected function resolveMeta(ReflectionClassConstant $reflection): array

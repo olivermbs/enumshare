@@ -2,6 +2,12 @@
 
 All notable changes to `enumshare` will be documented in this file.
 
+## v1.3.0 - 2026-08-11
+
+### Added
+
+- Entry labels fall back to a public `label(): string` method on the enum before using the case name, so conventional Laravel label methods export without per-case attributes
+
 ## v1.2.0 - 2026-07-29
 
 ### Added
