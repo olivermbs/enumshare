@@ -151,7 +151,7 @@ class TypeScriptEnumGenerator
         foreach ($metaTypes as $key => $types) {
             $union = implode(' | ', array_unique($types));
             $optional = $metaPresence[$key] < count($entries) ? '?' : '';
-            $props[] = "  readonly {$key}{$optional}: {$union};";
+            $props[] = '  readonly '.$this->formatPropertyName((string) $key)."{$optional}: {$union};";
         }
         $propsStr = implode("\n", $props);
 

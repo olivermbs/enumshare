@@ -33,4 +33,12 @@ class InvalidEnumException extends Exception
     {
         return new self("Failed to reflect enum class '{$enumClass}': {$error}");
     }
+
+    public static function indexCollision(string $enumClass): self
+    {
+        return new self(
+            "Enum '{$enumClass}' conflicts with the generated index.ts barrel file. ".
+            'Rename the enum or disable index generation.'
+        );
+    }
 }

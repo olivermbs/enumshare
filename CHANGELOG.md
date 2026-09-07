@@ -2,6 +2,14 @@
 
 All notable changes to `enumshare` will be documented in this file.
 
+## v1.3.1 - 2026-09-07
+
+### Fixes
+
+- Quote metadata keys in generated TypeScript types, including keys containing spaces, hyphens, or quotes
+- Reject enum names that collide with the index.ts barrel filename before writing or pruning files
+- Generate and preserve a valid empty barrel when no enums remain, so exports pass `--check` with indexing enabled
+
 ## v1.3.0 - 2026-08-11
 
 ### Added

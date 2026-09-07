@@ -326,7 +326,13 @@ it('uses the entry type and compiles under strict unused checks with and without
                 'key' => 'Active',
                 'value' => 'active',
                 'label' => 'Active',
-                'meta' => ['tags' => ['visible']],
+                'meta' => [
+                    'tags' => ['visible'],
+                    'badge-color' => 'green',
+                    'display name' => 'Active',
+                    'quote"key' => true,
+                    42 => 'numeric key',
+                ],
                 'isVisible' => true,
                 'aliases' => ['enabled'],
             ],
@@ -374,7 +380,11 @@ it('uses the entry type and compiles under strict unused checks with and without
 
     expect($result)
         ->toContain('from(value: string | null | undefined): StatusEntry | null')
-        ->toContain('fromKey(key: string | null | undefined): StatusEntry | null');
+        ->toContain('fromKey(key: string | null | undefined): StatusEntry | null')
+        ->toContain('readonly "badge-color"?: string;')
+        ->toContain('readonly "display name"?: string;')
+        ->toContain('readonly "quote\\"key"?: boolean;')
+        ->toContain('readonly "42"?: string;');
 });
 
 it('compiles non-backed enums under strict unused checks with and without exported types', function () {

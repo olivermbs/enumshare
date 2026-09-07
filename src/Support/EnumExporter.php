@@ -5,6 +5,7 @@ namespace Olivermbs\Enumshare\Support;
 use Illuminate\Support\Facades\File;
 use Olivermbs\Enumshare\Attributes\DontExport;
 use Olivermbs\Enumshare\Exceptions\ExportException;
+use Olivermbs\Enumshare\Exceptions\InvalidEnumException;
 use ReflectionClass;
 
 class EnumExporter
@@ -35,6 +36,14 @@ class EnumExporter
 
         $manifest = $this->registry->manifest($locale);
 
+        if ($index) {
+            foreach ($manifest as $enumName => $enumData) {
+                if (strcasecmp($enumName, 'index') === 0) {
+                    throw InvalidEnumException::indexCollision($enumData['fqcn']);
+                }
+            }
+        }
+
         if ($listOnly) {
             return [
                 'mode' => 'list',
@@ -48,7 +57,7 @@ class EnumExporter
             return $this->check($manifest, $path, $exportTypes, $index, $warnings);
         }
 
-        if (empty($manifest)) {
+        if (empty($manifest) && ! $index) {
             $result = [
                 'mode' => 'export',
                 'generated' => 0,
@@ -264,6 +273,10 @@ class EnumExporter
 
     protected function indexContent(array $manifest): string
     {
+        if ($manifest === []) {
+            return "// Auto-generated. Do not edit.\n\nexport {};\n";
+        }
+
         $exports = array_map(
             fn ($name) => "export { {$name} } from './{$name}';",
             array_keys($manifest)
