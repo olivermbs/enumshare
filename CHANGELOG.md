@@ -2,6 +2,17 @@
 
 All notable changes to `enumshare` will be documented in this file.
 
+## Unreleased
+
+### Removed
+
+- Laravel 11 support. Laravel 11 is end-of-life and every 11.x release is affected by unpatched security advisories, so Composer refuses to install it by default
+
+### Added
+
+- PHP 8.5 in the test matrix
+- Pest 5 allowed as a dev dependency
+
 ## v1.3.1 - 2026-09-07
 
 ### Fixes
