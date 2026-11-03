@@ -2,7 +2,7 @@
 
 All notable changes to `enumshare` will be documented in this file.
 
-## Unreleased
+## v1.4.0 - 2026-11-03
 
 ### Removed
 
