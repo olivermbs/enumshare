@@ -87,6 +87,34 @@ class PruneTest extends TestCase
         $this->assertFileDoesNotExist("{$this->out}/OldEnum.ts");
     }
 
+    public function test_prune_keeps_handwritten_files_that_mention_the_marker_in_their_body(): void
+    {
+        $content = "import { PruneKeptEnum } from './PruneKeptEnum';\n\n// Auto-generated from PHP enums, see PruneKeptEnum.ts\nexport const mine = PruneKeptEnum;\n";
+        File::put("{$this->out}/helpers.ts", $content);
+
+        $this->artisan('enums:export', ['--path' => $this->out, '--prune' => true])->assertSuccessful();
+
+        $this->assertFileExists("{$this->out}/helpers.ts");
+    }
+
+    public function test_empty_path_option_falls_back_to_configured_path(): void
+    {
+        config()->set('enumshare.path', $this->out);
+
+        $this->artisan('enums:export', ['--path' => ''])->assertSuccessful();
+
+        $this->assertFileExists("{$this->out}/PruneKeptEnum.ts");
+    }
+
+    public function test_unknown_mode_produces_a_warning(): void
+    {
+        config()->set('enumshare.mode', 'compact');
+
+        $this->artisan('enums:export', ['--path' => $this->out])
+            ->expectsOutputToContain("Unknown enumshare.mode 'compact'")
+            ->assertSuccessful();
+    }
+
     public function test_find_orphans_compares_path_separators_agnostically(): void
     {
         $filePath = "{$this->out}/PruneKeptEnum.ts";

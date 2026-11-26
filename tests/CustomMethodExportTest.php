@@ -96,3 +96,28 @@ it('skips and warns about custom methods using reserved entry keys', function ()
         'key' => 'label',
     ]);
 });
+
+enum OptionalParameterExportMethod: string
+{
+    case Active = 'active';
+
+    #[ExportMethod]
+    public function color(bool $dark = false): string
+    {
+        return $dark ? 'dark-green' : 'green';
+    }
+
+    #[ExportMethod]
+    public function badge(string $size): string
+    {
+        return $size;
+    }
+}
+
+it('exports custom methods whose parameters are all optional and skips ones with required parameters', function () {
+    $entry = (new EnumExtractor)->extract(OptionalParameterExportMethod::class)['entries'][0];
+
+    expect($entry)
+        ->toHaveKey('color', 'green')
+        ->not->toHaveKey('badge');
+});

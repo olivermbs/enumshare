@@ -2,6 +2,23 @@
 
 All notable changes to `enumshare` will be documented in this file.
 
+## Unreleased
+
+### Fixes
+
+- `#[ExportMethod]` methods whose parameters all have defaults are now exported instead of silently skipped
+- Reject enums whose short names differ only by case (`UserId` and `UserID`), which overwrote each other on case-insensitive filesystems
+- Reject enum and case names of `globalThis`, which made the generated module throw at load time
+- `--prune` only treats a file as generated when the marker is in its first two lines, so handwritten files that mention the marker are kept
+- `index.ts` is no longer rewritten when its content is unchanged
+- An empty `--path=` falls back to the configured path instead of the filesystem root
+- Warn when `enumshare.mode` is not `full` or `minimal`
+
+### Changed
+
+- CI installs Node so the `tsc --strict` compilation tests run instead of being skipped
+- The Pint auto-fix workflow no longer runs on tag pushes
+
 ## v1.4.0 - 2026-11-03
 
 ### Removed

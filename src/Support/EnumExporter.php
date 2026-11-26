@@ -12,6 +12,10 @@ class EnumExporter
 {
     protected const array GENERATED_MARKERS = ['// Auto-generated from', '// Auto-generated. Do not edit.'];
 
+    protected const int MARKER_HEADER_LINES = 2;
+
+    protected const array MODES = ['full', 'minimal'];
+
     public function __construct(
         protected EnumRegistry $registry,
         protected TypeScriptEnumGenerator $generator
@@ -20,13 +24,7 @@ class EnumExporter
     public function export(array $options): array
     {
         $locale = $options['locale'] ?? config('enumshare.locale');
-        $path = $options['path'] ?? config('enumshare.path', resource_path('js/Enums'));
-        $path = rtrim($path, '/'.DIRECTORY_SEPARATOR);
-        if ($path === '') {
-            $path = DIRECTORY_SEPARATOR;
-        } elseif (preg_match('/^[A-Za-z]:$/', $path) === 1) {
-            $path .= DIRECTORY_SEPARATOR;
-        }
+        $path = $this->resolvePath($options['path'] ?? null);
         $exportTypes = $options['types'] ?? false;
         $force = $options['force'] ?? false;
         $index = ($options['index'] ?? false) || config('enumshare.index', false);
@@ -78,7 +76,7 @@ class EnumExporter
         $stats = $this->writeEnumFiles($manifest, $path, $exportTypes, $force);
 
         if ($index) {
-            $this->generateIndexFile($path, $manifest);
+            $this->generateIndexFile($path, $manifest, $force);
         }
 
         $keepPaths = $stats['files'];
@@ -144,6 +142,11 @@ class EnumExporter
         $configWarnings = [];
         if (empty($configuredEnums) && ! $autoDiscovery) {
             $configWarnings[] = 'No enums configured and auto-discovery is disabled.';
+        }
+
+        $mode = config('enumshare.mode', 'full');
+        if (! in_array($mode, self::MODES, true)) {
+            $configWarnings[] = "Unknown enumshare.mode '{$mode}'; expected 'full' or 'minimal'. Falling back to 'full'.";
         }
 
         foreach ($configuredEnums as $enumClass) {
@@ -246,15 +249,40 @@ class EnumExporter
 
     protected function hasGeneratedMarker(string $filePath): bool
     {
-        $content = File::get($filePath);
+        $headerLines = array_slice(
+            preg_split('/\R/', File::get($filePath), self::MARKER_HEADER_LINES + 1),
+            0,
+            self::MARKER_HEADER_LINES
+        );
 
-        foreach (self::GENERATED_MARKERS as $marker) {
-            if (str_contains($content, $marker)) {
-                return true;
+        foreach ($headerLines as $line) {
+            foreach (self::GENERATED_MARKERS as $marker) {
+                if (str_starts_with(trim($line), $marker)) {
+                    return true;
+                }
             }
         }
 
         return false;
+    }
+
+    protected function resolvePath(?string $path): string
+    {
+        if ($path === null || $path === '') {
+            $path = config('enumshare.path') ?: resource_path('js/Enums');
+        }
+
+        $path = rtrim($path, '/'.DIRECTORY_SEPARATOR);
+
+        if ($path === '') {
+            return DIRECTORY_SEPARATOR;
+        }
+
+        if (preg_match('/^[A-Za-z]:$/', $path) === 1) {
+            return $path.DIRECTORY_SEPARATOR;
+        }
+
+        return $path;
     }
 
     protected function shouldSkipFile(string $filePath, string $content, bool $force): bool
@@ -266,9 +294,16 @@ class EnumExporter
         return hash('xxh3', File::get($filePath)) === hash('xxh3', $content);
     }
 
-    protected function generateIndexFile(string $enumsDir, array $manifest): void
+    protected function generateIndexFile(string $enumsDir, array $manifest, bool $force): void
     {
-        File::put("{$enumsDir}/index.ts", $this->indexContent($manifest));
+        $indexPath = "{$enumsDir}/index.ts";
+        $content = $this->indexContent($manifest);
+
+        if ($this->shouldSkipFile($indexPath, $content, $force)) {
+            return;
+        }
+
+        File::put($indexPath, $content);
     }
 
     protected function indexContent(array $manifest): string
