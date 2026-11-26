@@ -26,6 +26,7 @@ class EnumRegistry
         'BY_KEY',
         'BY_VALUE',
         'resolveLabel',
+        'globalThis',
     ];
 
     protected const array MODULE_LEVEL_GENERATED_IDENTIFIERS = [
@@ -36,6 +37,7 @@ class EnumRegistry
         'BY_KEY',
         'BY_VALUE',
         'resolveLabel',
+        'globalThis',
     ];
 
     protected const array TYPESCRIPT_RESERVED_WORDS = [
@@ -108,11 +110,13 @@ class EnumRegistry
             $reflection = new ReflectionClass($enumClass);
             $shortName = $reflection->getShortName();
 
-            if (isset($seen[$shortName])) {
-                throw InvalidEnumException::duplicateShortName($shortName, $seen[$shortName], $enumClass);
+            $fileKey = strtolower($shortName);
+
+            if (isset($seen[$fileKey])) {
+                throw InvalidEnumException::duplicateShortName($shortName, $seen[$fileKey], $enumClass);
             }
 
-            $seen[$shortName] = $enumClass;
+            $seen[$fileKey] = $enumClass;
             $manifest[$shortName] = $this->extractor->extract($enumClass, $locale);
         }
 

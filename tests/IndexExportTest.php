@@ -70,6 +70,22 @@ class IndexExportTest extends TestCase
         $this->assertFileExists($this->out.'/Old.ts');
     }
 
+    public function test_unchanged_barrel_is_not_rewritten(): void
+    {
+        $options = ['--path' => $this->out, '--index' => true];
+        $this->artisan('enums:export', $options)->assertSuccessful();
+
+        $indexPath = $this->out.'/index.ts';
+        touch($indexPath, time() - 3600);
+        clearstatcache();
+        $originalMtime = filemtime($indexPath);
+
+        $this->artisan('enums:export', $options)->assertSuccessful();
+        clearstatcache();
+
+        $this->assertSame($originalMtime, filemtime($indexPath));
+    }
+
     public function test_index_enum_can_export_without_a_barrel(): void
     {
         config()->set('enumshare.enums', [index::class]);

@@ -3,6 +3,7 @@
 use Olivermbs\Enumshare\Attributes\Label;
 use Olivermbs\Enumshare\Attributes\Meta;
 use Olivermbs\Enumshare\Attributes\TranslatedLabel;
+use Olivermbs\Enumshare\Exceptions\InvalidEnumException;
 use Olivermbs\Enumshare\Support\EnumExtractor;
 use Olivermbs\Enumshare\Support\EnumRegistry;
 use Olivermbs\Enumshare\Tests\TestCase;
@@ -50,6 +51,11 @@ enum TypeScriptArgumentsCollision
 enum TypeScriptEvalCollision
 {
     case eval;
+}
+
+enum GlobalThisCollision
+{
+    case globalThis;
 }
 
 enum delete
@@ -274,6 +280,29 @@ class EnumExportTest extends TestCase
             ->toContain("Enum '".SelfNamedCaseCollision::class."' case 'SelfNamedCaseCollision'")
             ->toContain('matches its short name')
             ->toContain('duplicate TypeScript identifier');
+    }
+
+    public function test_enum_registry_rejects_case_named_global_this(): void
+    {
+        $errors = (new EnumRegistry)->validateEnums([GlobalThisCollision::class]);
+
+        expect($errors[GlobalThisCollision::class])
+            ->toContain("case 'globalThis'")
+            ->toContain('conflicts with a generated TypeScript identifier');
+    }
+
+    public function test_enum_registry_rejects_short_names_that_differ_only_by_case(): void
+    {
+        eval('namespace EnumshareCaseClashA; enum CaseClash: string { case One = "one"; }');
+        eval('namespace EnumshareCaseClashB; enum caseclash: string { case One = "one"; }');
+
+        $registry = new EnumRegistry(
+            ['EnumshareCaseClashA\CaseClash', 'EnumshareCaseClashB\caseclash'],
+            null,
+            $this->extractor
+        );
+
+        expect(fn () => $registry->manifest())->toThrow(InvalidEnumException::class);
     }
 
     public function test_translated_label_with_multiple_locales(): void

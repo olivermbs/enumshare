@@ -118,7 +118,7 @@ class EnumExtractor
         foreach ($reflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
             $attr = $method->getAttributes(ExportMethod::class)[0] ?? null;
 
-            if (! $attr || $method->getNumberOfParameters() > 0) {
+            if (! $attr || $method->getNumberOfRequiredParameters() > 0) {
                 continue;
             }
 

@@ -1,7 +1,21 @@
 <?php
 
 use Olivermbs\Enumshare\Support\TypeScriptEnumGenerator;
+use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
+
+/** @return array<int, string>|null */
+function typescriptCompilerCommand(): ?array
+{
+    $compiler = dirname(__DIR__, 2).'/node_modules/typescript/bin/tsc';
+    $node = (new ExecutableFinder)->find('node');
+
+    if (! is_file($compiler) || $node === null) {
+        return null;
+    }
+
+    return [$node, $compiler];
+}
 
 beforeEach(function () {
     $this->generator = new TypeScriptEnumGenerator;
@@ -153,9 +167,9 @@ it('emits custom method data and derives optional entry properties', function ()
 });
 
 it('types empty heterogeneous and nested lists and compiles them under strict checks', function () {
-    $typescript = dirname(__DIR__, 2).'/node_modules/.bin/tsc';
+    $typescript = typescriptCompilerCommand();
 
-    if (! is_file($typescript)) {
+    if ($typescript === null) {
         $this->markTestSkipped('TypeScript is not installed.');
     }
 
@@ -189,7 +203,7 @@ it('types empty heterogeneous and nested lists and compiles them under strict ch
         file_put_contents($file, $result);
 
         $process = new Process([
-            $typescript,
+            ...$typescript,
             '--strict',
             '--noUnusedLocals',
             '--noEmit',
@@ -212,9 +226,9 @@ it('types empty heterogeneous and nested lists and compiles them under strict ch
 });
 
 it('qualifies runtime globals shadowed by Map and Object enum cases', function () {
-    $typescript = dirname(__DIR__, 2).'/node_modules/.bin/tsc';
+    $typescript = typescriptCompilerCommand();
 
-    if (! is_file($typescript)) {
+    if ($typescript === null) {
         $this->markTestSkipped('TypeScript is not installed.');
     }
 
@@ -263,7 +277,7 @@ it('qualifies runtime globals shadowed by Map and Object enum cases', function (
             file_put_contents($file, $content);
 
             $process = new Process([
-                $typescript,
+                ...$typescript,
                 '--strict',
                 '--noUnusedLocals',
                 '--noEmit',
@@ -312,9 +326,9 @@ it('uses JSON string literals in full and minimal modes', function () {
 });
 
 it('uses the entry type and compiles under strict unused checks with and without exported types', function () {
-    $typescript = dirname(__DIR__, 2).'/node_modules/.bin/tsc';
+    $typescript = typescriptCompilerCommand();
 
-    if (! is_file($typescript)) {
+    if ($typescript === null) {
         $this->markTestSkipped('TypeScript is not installed.');
     }
 
@@ -354,7 +368,7 @@ it('uses the entry type and compiles under strict unused checks with and without
             file_put_contents($file, $this->generator->generate('Status', $enumData, $exportTypes));
 
             $process = new Process([
-                $typescript,
+                ...$typescript,
                 '--strict',
                 '--noUnusedLocals',
                 '--noEmit',
@@ -388,9 +402,9 @@ it('uses the entry type and compiles under strict unused checks with and without
 });
 
 it('compiles non-backed enums under strict unused checks with and without exported types', function () {
-    $typescript = dirname(__DIR__, 2).'/node_modules/.bin/tsc';
+    $typescript = typescriptCompilerCommand();
 
-    if (! is_file($typescript)) {
+    if ($typescript === null) {
         $this->markTestSkipped('TypeScript is not installed.');
     }
 
@@ -411,7 +425,7 @@ it('compiles non-backed enums under strict unused checks with and without export
             file_put_contents($file, $this->generator->generate('Direction', $enumData, $exportTypes));
 
             $process = new Process([
-                $typescript,
+                ...$typescript,
                 '--strict',
                 '--noUnusedLocals',
                 '--noEmit',

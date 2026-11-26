@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Olivermbs\Enumshare\Support\EnumAutoDiscovery;
 use Olivermbs\Enumshare\Support\EnumExtractor;
@@ -198,22 +197,6 @@ class {$className}
 }";
 
         File::put($this->testEnumsPath.'/'.$className.'.php', $content);
-    }
-
-    public function getEnvironmentSetUp($app): void
-    {
-        parent::getEnvironmentSetUp($app);
-
-        $app['config']->set('enumshare.autodiscovery', [
-            'enabled' => true,
-            'paths' => ['test_enums'],
-            'namespaces' => ['App\\Enums\\*'],
-            'cache' => [
-                'enabled' => false,
-                'key' => 'test.discovered_enums',
-                'ttl' => 3600,
-            ],
-        ]);
     }
 }
 
